@@ -54,7 +54,7 @@ Any role → notify-user.sh → Telegram (direct notifications)
 
 | Channel | Purpose | Persistence |
 |---------|---------|-------------|
-| **BOARD.md** | Shared team state (decisions, blockers, findings) | Git-versioned |
+| **board.md** | Shared team state (decisions, blockers, findings) | In .octobots/ |
 | **Taskbox** | Inter-role task assignment and coordination | SQLite, ephemeral |
 | **GitHub Issues** | Permanent audit trail (every action gets a comment) | Forever |
 
@@ -70,15 +70,15 @@ Back to #103 → /resume python-dev-issue-103 → context restored
 
 No context blowup. Each task has its own session. Fully resumable.
 
-### Worktree Isolation
+### Worker Isolation
 
-Code-writing roles (python-dev, js-dev, qa-engineer) get their own git worktree per task:
+Code-writing roles (python-dev, js-dev, qa-engineer) get their own isolated environment per worker:
 
 ```
-.worktrees/
-├── python-dev-issue-103/   ← branch feat/issue-103, own .env, own port
-├── js-dev-issue-104/       ← branch feat/issue-104
-└── qa-engineer-issue-103/  ← testing Py's work
+.octobots/workers/
+├── python-dev/    ← own repo clones, own branch, own .env
+├── js-dev/        ← own repo clones
+└── qa-engineer/   ← own repo clones
 ```
 
 No file conflicts between parallel workers. PRs are where integration happens.
@@ -96,7 +96,7 @@ octobots/                            ← FRAMEWORK (git pull, read-only)
 ├── shared/
 │   ├── agents/                        Shared agents (rca-investigator, etc.)
 │   └── conventions/                   Teamwork, audit trail, sessions
-├── skills/                            11 shared skills
+├── skills/                            10 shared skills
 └── scripts/
     ├── supervisor.py                  Rich TUI supervisor
     ├── telegram-bridge.py             Telegram ↔ tmux bridge

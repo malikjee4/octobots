@@ -49,13 +49,13 @@ MCP servers? Too many companies block them. WebSockets? Overkill. The answer tur
 
 ```bash
 # Send a message
-python relay.py send --from py --to qa "Issue #103 fixed. PR #45 ready for testing."
+python3 octobots/skills/taskbox/scripts/relay.py send --from py --to qa "Issue #103 fixed. PR #45 ready for testing."
 
 # Check inbox
-python relay.py inbox --id qa
+python3 octobots/skills/taskbox/scripts/relay.py inbox --id qa
 
 # Acknowledge
-python relay.py ack MSG_ID "All tests pass."
+python3 octobots/skills/taskbox/scripts/relay.py ack MSG_ID "All tests pass."
 ```
 
 No servers. No daemons. No pip dependencies. Just `sqlite3` from Python's stdlib with WAL mode for concurrent access. I called it **Taskbox**.
@@ -302,7 +302,7 @@ Teams need shared state beyond tickets. `BOARD.md` is the team's whiteboard — 
 ```
 octobots/              ← framework (git pull for updates, read-only)
 ├── roles/               base templates
-├── skills/              11 shared skills
+├── skills/              10 shared skills
 ├── shared/              conventions, agents
 └── scripts/             supervisor, bridge, relay
 
@@ -359,7 +359,7 @@ The GitHub bridge polls the board, routes new inbox items to PM, and syncs colum
 
 ```bash
 # 1. Clone octobots into your project
-git clone git@github.com:onetest-ai/octobots.git octobots
+git clone git@github.com:arozumenko/octobots.git octobots
 
 # 2. Install dependencies
 pip install -r octobots/requirements.txt
@@ -432,7 +432,7 @@ Multi-agent coding is a fast-moving space. Octobots isn't the first — and it b
 | User interface | Telegram Bot API | Mobile-friendly, reply routing, @aliases |
 | Audit trail | GitHub Issues + App | `octobotsai[bot]` identity, full traceability |
 | Task tracking | GitHub Projects v2 | Visual board, column-based pipeline |
-| Skills | agentskills.io format | 11 skills, cross-tool compatible |
+| Skills | agentskills.io format | 10 skills, cross-tool compatible |
 | Isolation | Git clones per worker | Parallel devs, own browsers, zero conflicts |
 | Auth | GitHub App + JWT | Bot identity, auto-rotating tokens |
 
