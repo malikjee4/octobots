@@ -1,5 +1,7 @@
 # Octobots
 
+![Octobots Hero](docs/assets/hero.jpg)
+
 AI development team powered by Claude Code. Each role runs as a separate Claude Code instance in tmux, communicating via SQLite queue, with sessions mapped to GitHub issues and Telegram as the user interface.
 
 ## Quick Start

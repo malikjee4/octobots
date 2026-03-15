@@ -1,5 +1,7 @@
 # Building an AI Development Team with Claude Code
 
+![Octobots Hero](assets/hero.jpg)
+
 *How I turned multiple Claude Code instances into a coordinated software team — with roles, personalities, Telegram interface, and GitHub integration.*
 
 ---
