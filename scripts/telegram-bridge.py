@@ -188,12 +188,22 @@ def resolve_pane(role: str) -> str:
 
 
 def tmux_send(role: str, text: str) -> bool:
-    """Send a single-line message to a role's tmux pane."""
+    """Send a single-line message to a role's tmux pane.
+
+    Sends a second Enter after 1s to confirm Claude Code's paste prompt
+    which appears for long input.
+    """
     target = resolve_pane(role)
     single = text.replace("\n", " ").strip()
     try:
         subprocess.run(
             ["tmux", "send-keys", "-t", target, single, "Enter"],
+            check=True, capture_output=True,
+        )
+        import time
+        time.sleep(1)
+        subprocess.run(
+            ["tmux", "send-keys", "-t", target, "Enter"],
             check=True, capture_output=True,
         )
         return True
@@ -742,6 +752,102 @@ async def run_bot() -> None:
                 f"Failed to reach <b>{target_label}</b> — pane <code>{target_pane}</code> not found in tmux.",
             )
 
+    # ── Attachment handler — documents, photos, etc. ─────────────────────
+
+    async def handle_attachment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if not _auth(update):
+            await update.message.reply_text("Unauthorized.")
+            return
+
+        msg = update.message
+        caption = msg.caption or ""
+
+        # Determine target role from caption (@role prefix) or reply context
+        target_pane = PM_PANE
+        target_label = "📋 Max"
+
+        # Check reply context
+        reply = msg.reply_to_message
+        if reply and reply.text:
+            match = re.match(r"\[([a-z][\w-]*)\]", reply.text)
+            if match:
+                role = match.group(1)
+                target_pane = ALIASES.get(role, role)
+                target_label = DISPLAY_NAMES.get(target_pane, target_pane)
+
+        # Explicit @role in caption overrides
+        if caption.startswith("@"):
+            parts = caption.split(" ", 1)
+            role = parts[0][1:].lower()
+            target_pane = ALIASES.get(role, role)
+            target_label = DISPLAY_NAMES.get(target_pane, target_pane)
+            caption = parts[1] if len(parts) > 1 else ""
+
+        # Download the file
+        file_obj = None
+        filename = "attachment"
+
+        if msg.document:
+            file_obj = await context.bot.get_file(msg.document.file_id)
+            filename = msg.document.file_name or f"document_{msg.document.file_unique_id}"
+        elif msg.photo:
+            # Get the largest photo
+            photo = msg.photo[-1]
+            file_obj = await context.bot.get_file(photo.file_id)
+            filename = f"photo_{photo.file_unique_id}.jpg"
+        elif msg.audio:
+            file_obj = await context.bot.get_file(msg.audio.file_id)
+            filename = msg.audio.file_name or f"audio_{msg.audio.file_unique_id}"
+        elif msg.video:
+            file_obj = await context.bot.get_file(msg.video.file_id)
+            filename = msg.video.file_name or f"video_{msg.video.file_unique_id}"
+        elif msg.voice:
+            file_obj = await context.bot.get_file(msg.voice.file_id)
+            filename = f"voice_{msg.voice.file_unique_id}.ogg"
+
+        if not file_obj:
+            await send_telegram(context.bot, update.effective_chat.id, "<i>Unsupported attachment type.</i>")
+            return
+
+        # Save to .octobots/inbox/
+        inbox_dir = RUNTIME_DIR / "inbox"
+        inbox_dir.mkdir(parents=True, exist_ok=True)
+        local_path = inbox_dir / filename
+
+        await file_obj.download_to_drive(str(local_path))
+        logger.info("Downloaded attachment: %s → %s", filename, local_path)
+
+        if not tmux_session_exists():
+            await send_telegram(
+                context.bot, update.effective_chat.id,
+                "Supervisor not running.\nStart with: <code>octobots/supervisor.sh</code>",
+            )
+            return
+
+        # For text-based files, include content inline in the prompt
+        text_extensions = {".md", ".txt", ".json", ".yaml", ".yml", ".csv", ".py", ".js", ".ts", ".html", ".css", ".sh", ".toml", ".cfg", ".ini", ".xml", ".sql"}
+        ext = Path(filename).suffix.lower()
+        file_ref = f"(file saved to {local_path})"
+
+        if ext in text_extensions and local_path.stat().st_size < 50_000:
+            content = local_path.read_text(encoding="utf-8", errors="replace")
+            prompt = f"[User via Telegram] sent file '{filename}': {caption}\n\n--- FILE CONTENT ---\n{content}\n--- END FILE ---"
+        else:
+            prompt = f"[User via Telegram] sent file '{filename}' {file_ref}: {caption}"
+
+        success = tmux_send(target_pane, prompt)
+
+        if success:
+            await send_telegram(
+                context.bot, update.effective_chat.id,
+                f"📎 <b>{filename}</b> → <b>{target_label}</b>",
+            )
+        else:
+            await send_telegram(
+                context.bot, update.effective_chat.id,
+                f"Failed to reach <b>{target_label}</b> — pane not found.",
+            )
+
     # ── Build app and register handlers ────────────────────────────────
 
     app = Application.builder().token(TG_TOKEN).build()
@@ -759,6 +865,10 @@ async def run_bot() -> None:
     app.add_handler(CommandHandler("restart", cmd_restart))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(
+        (filters.Document.ALL | filters.PHOTO | filters.AUDIO | filters.VIDEO | filters.VOICE) & ~filters.COMMAND,
+        handle_attachment,
+    ))
 
     # Set bot command menu (shows in Telegram UI)
     await app.bot.set_my_commands([
