@@ -396,15 +396,12 @@ class Supervisor:
 
         db_path = RUNTIME_DIR / "relay.db"
         gh_env = f"GH_TOKEN={self._gh_token} " if getattr(self, "_gh_token", "") else ""
-        tg_token = os.environ.get("OCTOBOTS_TG_TOKEN", "")
-        tg_owner = os.environ.get("OCTOBOTS_TG_OWNER", "")
-        tg_env = ""
-        if tg_token:
-            tg_env += f"OCTOBOTS_TG_TOKEN={tg_token} "
-        if tg_owner:
-            tg_env += f"OCTOBOTS_TG_OWNER={tg_owner} "
+        # NOTE: Do NOT pass OCTOBOTS_TG_TOKEN/OCTOBOTS_TG_OWNER here.
+        # Shell scripts (notify-user.sh, send-file.sh) read .env.octobots
+        # fresh on every invocation, so edits take effect immediately
+        # without restarting workers.
         cmd = (
-            f"{gh_env}{tg_env}OCTOBOTS_ID={role} OCTOBOTS_DB={db_path} "
+            f"{gh_env}OCTOBOTS_ID={role} OCTOBOTS_DB={db_path} "
             f"CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 "
             f"claude --add-dir '{role_dir}' --dangerously-skip-permissions"
         )

@@ -37,27 +37,25 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Load .env.octobots if not already in env
+# Always load .env.octobots fresh (so edits take effect without restart)
 # Search order: project root (via git), cwd, octobots repo root
-if [[ -z "${OCTOBOTS_TG_TOKEN:-}" ]]; then
-    PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
-    for env_file in \
-        "${PROJECT_ROOT:+$PROJECT_ROOT/.env.octobots}" \
-        ".env.octobots" \
-        "$SCRIPT_DIR/../.env.octobots" \
-        "$SCRIPT_DIR/../../.env.octobots"; do
-        [[ -z "$env_file" ]] && continue
-        if [[ -f "$env_file" ]]; then
-            while IFS='=' read -r key value; do
-                key=$(echo "$key" | tr -d ' ')
-                value=$(echo "$value" | tr -d ' ' | tr -d '"' | tr -d "'")
-                [[ -z "$key" || "$key" == \#* ]] && continue
-                export "$key=$value" 2>/dev/null || true
-            done < "$env_file"
-            break
-        fi
-    done
-fi
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
+for env_file in \
+    "${PROJECT_ROOT:+$PROJECT_ROOT/.env.octobots}" \
+    ".env.octobots" \
+    "$SCRIPT_DIR/../.env.octobots" \
+    "$SCRIPT_DIR/../../.env.octobots"; do
+    [[ -z "$env_file" ]] && continue
+    if [[ -f "$env_file" ]]; then
+        while IFS='=' read -r key value; do
+            key=$(echo "$key" | tr -d ' ')
+            value=$(echo "$value" | tr -d ' ' | tr -d '"' | tr -d "'")
+            [[ -z "$key" || "$key" == \#* ]] && continue
+            export "$key=$value" 2>/dev/null || true
+        done < "$env_file"
+        break
+    fi
+done
 
 TOKEN="${OCTOBOTS_TG_TOKEN:-}"
 CHAT_ID="${OCTOBOTS_TG_OWNER:-}"
