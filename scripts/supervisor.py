@@ -332,7 +332,7 @@ class Supervisor:
                 ok = False
         return ok
 
-    def _get_gh_token(self) -> str:
+    def _get_gh_app_token(self) -> str:
         """Get GitHub App installation token if configured."""
         if os.environ.get("OCTOBOTS_GH_APP_ID"):
             try:
@@ -350,16 +350,60 @@ class Supervisor:
                 console.print(f"[yellow]GitHub App token failed: {e}[/yellow]")
         return ""
 
+    def _resolve_gh_token(self, role: str) -> str:
+        """Resolve the GitHub token for a specific role.
+
+        Resolution order:
+        1. OCTOBOTS_GH_TOKEN_<ROLE> — per-role token (role name uppercased, dashes → underscores)
+           e.g. OCTOBOTS_GH_TOKEN_PROJECT_MANAGER, OCTOBOTS_GH_TOKEN_PYTHON_DEV
+        2. OCTOBOTS_GH_TOKEN — shared token for all roles
+        3. GitHub App installation token (if configured)
+        4. Empty string — worker falls back to personal gh auth
+        """
+        # Per-role token
+        role_key = f"OCTOBOTS_GH_TOKEN_{role.upper().replace('-', '_')}"
+        per_role = os.environ.get(role_key, "")
+        if per_role:
+            return per_role
+
+        # Shared token
+        shared = os.environ.get("OCTOBOTS_GH_TOKEN", "")
+        if shared:
+            return shared
+
+        # GitHub App token (shared across roles)
+        return self._gh_app_token
+
     def setup(self) -> None:
         # Init taskbox
         self.taskbox.init()
 
-        # Get GitHub App token
-        self._gh_token = self._get_gh_token()
-        if self._gh_token:
-            console.print("[green]✓ GitHub App authenticated[/green]")
+        # Get GitHub App token (used as fallback if no per-role tokens)
+        self._gh_app_token = self._get_gh_app_token()
+
+        # Show token configuration
+        has_per_role = any(
+            os.environ.get(f"OCTOBOTS_GH_TOKEN_{r.upper().replace('-', '_')}")
+            for r in self.workers
+        )
+        has_shared = bool(os.environ.get("OCTOBOTS_GH_TOKEN"))
+
+        if has_per_role:
+            configured = [
+                r for r in self.workers
+                if os.environ.get(f"OCTOBOTS_GH_TOKEN_{r.upper().replace('-', '_')}")
+            ]
+            console.print(f"[green]✓ Per-role GH tokens:[/green] {', '.join(configured)}")
+            unconfigured = [r for r in self.workers if r not in configured]
+            if unconfigured:
+                fallback = "shared token" if has_shared else ("GitHub App" if self._gh_app_token else "personal gh auth")
+                console.print(f"[dim]  Others use {fallback}: {', '.join(unconfigured)}[/dim]")
+        elif has_shared:
+            console.print("[green]✓ Shared GH token for all roles[/green]")
+        elif self._gh_app_token:
+            console.print("[green]✓ GitHub App authenticated (all roles)[/green]")
         else:
-            console.print("[dim]GitHub App not configured — using personal gh auth[/dim]")
+            console.print("[dim]No GH tokens configured — using personal gh auth[/dim]")
 
         # Clear stuck messages
         stuck = self.taskbox.clear_stuck()
@@ -395,7 +439,8 @@ class Supervisor:
             console.print(f"[cyan]◆[/cyan] {role} → workspace root")
 
         db_path = RUNTIME_DIR / "relay.db"
-        gh_env = f"GH_TOKEN={self._gh_token} " if getattr(self, "_gh_token", "") else ""
+        gh_token = self._resolve_gh_token(role)
+        gh_env = f"GH_TOKEN={gh_token} " if gh_token else ""
         # NOTE: Do NOT pass OCTOBOTS_TG_TOKEN/OCTOBOTS_TG_OWNER here.
         # Shell scripts (notify-user.sh, send-file.sh) read .env.octobots
         # fresh on every invocation, so edits take effect immediately
@@ -495,7 +540,7 @@ class Supervisor:
 
     def _poll_github_issues(self) -> None:
         """Check for GitHub issues assigned to the bot and route to PM."""
-        gh_token = getattr(self, "_gh_token", "")
+        gh_token = getattr(self, "_gh_app_token", "")
         issue_repo = os.environ.get("OCTOBOTS_ISSUE_REPO", "")
         if not gh_token or not issue_repo:
             return
