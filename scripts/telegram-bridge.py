@@ -829,11 +829,15 @@ async def run_bot() -> None:
         ext = Path(filename).suffix.lower()
         file_ref = f"(file saved to {local_path})"
 
-        if ext in text_extensions and local_path.stat().st_size < 50_000:
+        # Always tell the role where the file is saved so it can Read it.
+        # For short text files, include a preview; for everything else, just the path.
+        if ext in text_extensions and local_path.stat().st_size < 2000:
             content = local_path.read_text(encoding="utf-8", errors="replace")
-            prompt = f"[User via Telegram] sent file '{filename}': {caption}\n\n--- FILE CONTENT ---\n{content}\n--- END FILE ---"
+            prompt = f"[User via Telegram] sent file '{filename}' (saved to {local_path}): {caption} -- Content: {content}"
+        elif ext in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"}:
+            prompt = f"[User via Telegram] sent image '{filename}' (saved to {local_path}): {caption} -- Use the Read tool on {local_path} to view it."
         else:
-            prompt = f"[User via Telegram] sent file '{filename}' {file_ref}: {caption}"
+            prompt = f"[User via Telegram] sent file '{filename}' (saved to {local_path}): {caption} -- Use the Read tool on {local_path} to view it."
 
         success = tmux_send(target_pane, prompt)
 
@@ -864,11 +868,14 @@ async def run_bot() -> None:
     app.add_handler(CommandHandler("loop", cmd_loop))
     app.add_handler(CommandHandler("restart", cmd_restart))
     app.add_handler(CommandHandler("help", cmd_help))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    # Attachment handler MUST be registered before text handler.
+    # Photo-with-caption messages can match both filters.TEXT (via caption)
+    # and filters.PHOTO. By registering attachments first, they get priority.
     app.add_handler(MessageHandler(
         (filters.Document.ALL | filters.PHOTO | filters.AUDIO | filters.VIDEO | filters.VOICE) & ~filters.COMMAND,
         handle_attachment,
     ))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Set bot command menu (shows in Telegram UI)
     await app.bot.set_my_commands([
