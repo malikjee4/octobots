@@ -81,6 +81,8 @@ After the user clears context, the role starts fresh:
 - **PM**: User prompt or periodic check-in
 - **BA/Tech Lead**: Taskbox message from upstream role
 
+**If idle with nothing to do:** Send one Telegram notification via `notify-user.sh "Standing by — inbox empty, no open issues."` — then wait. **Never** print questions or menus to the terminal. See `octobots/shared/conventions/no-terminal-interaction.md`.
+
 ## What Goes Where
 
 | Information | Lives In | Why |

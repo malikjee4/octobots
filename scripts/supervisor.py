@@ -170,13 +170,22 @@ class TmuxManager:
     def kill(self) -> None:
         subprocess.run(["tmux", "kill-session", "-t", self.session], capture_output=True)
 
-    def send_keys(self, pane: str, text: str) -> bool:
+    def send_keys(self, pane: str, text: str, confirm_paste: bool = False) -> bool:
         single = text.replace("\n", " ").strip()
         try:
             subprocess.run(
                 ["tmux", "send-keys", "-t", pane, single, "Enter"],
                 check=True, capture_output=True,
             )
+            if confirm_paste:
+                # Claude Code shows "[Pasted text #N +N lines]" for long input
+                # and waits for Enter to submit. Send a second Enter after a
+                # short delay to confirm the paste.
+                time.sleep(1)
+                subprocess.run(
+                    ["tmux", "send-keys", "-t", pane, "Enter"],
+                    check=True, capture_output=True,
+                )
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             return False
@@ -391,7 +400,7 @@ class Supervisor:
             f"CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 "
             f"claude --add-dir '{role_dir}' --dangerously-skip-permissions"
         )
-        self.tmux.send_keys(pane, cmd)
+        self.tmux.send_keys(pane, cmd, confirm_paste=True)
         self.launched.add(role)
         time.sleep(3)
 
@@ -419,7 +428,7 @@ class Supervisor:
             f"If it is a question: answer via {relay_cmd} ack {msg_id} \"your answer\". "
             f"NEVER ignore a message. Silence breaks the pipeline."
         )
-        self.tmux.send_keys(pane, prompt)
+        self.tmux.send_keys(pane, prompt, confirm_paste=True)
         console.print(f"[green]→[/green] {role}: task from {sender} ({msg_id[:8]})")
 
     def _on_scheduled_event(self, job: Any, result: str) -> None:
@@ -622,7 +631,7 @@ class Supervisor:
         if not pane:
             console.print(f"[red]Unknown role: {role}[/red]")
             return
-        self.tmux.send_keys(pane, message)
+        self.tmux.send_keys(pane, message, confirm_paste=True)
         console.print(f"[green]→[/green] Sent to {role}")
 
     def cmd_restart(self, role: str) -> None:

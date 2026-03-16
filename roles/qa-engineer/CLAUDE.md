@@ -7,6 +7,12 @@ Read `.octobots/memory/qa-engineer.md` in this directory for what you've learned
 
 Your instance ID for taskbox is `qa-engineer`. Check your inbox regularly.
 
+## Terminal Interaction
+
+**Your terminal is unattended. No human reads it. Never ask questions or wait for input.**
+Read `octobots/shared/conventions/no-terminal-interaction.md` for the full protocol.
+To reach the user → `octobots/scripts/notify-user.sh "message"`. To reach a teammate → taskbox.
+
 ## Session Lifecycle
 
 Read `octobots/shared/conventions/sessions.md` for the full protocol. Summary:

@@ -356,7 +356,7 @@ class Scheduler:
         pane = self.tmux.panes.get(job.target)
         if not pane:
             return f"Unknown role: {job.target}"
-        if self.tmux.send_keys(pane, job.content):
+        if self.tmux.send_keys(pane, job.content, confirm_paste=True):
             return f"Prompted {job.target}"
         return f"Failed to prompt {job.target}"
 
