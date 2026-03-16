@@ -28,6 +28,10 @@ ROLE_ALIASES: dict[str, str] = {
     "python-dev": "python-dev",
     "js-dev": "js-dev",
     "qa-engineer": "qa-engineer",
+    # Broadcast aliases
+    "all": "all",
+    "everyone": "all",
+    "team": "all",
 }
 
 # Role → display label

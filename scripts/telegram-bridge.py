@@ -737,6 +737,26 @@ async def run_bot() -> None:
             )
             return
 
+        # Broadcast to all workers
+        if target_pane == "all":
+            pane_map = _load_pane_map()
+            sent = []
+            failed = []
+            for role_name, _ in sorted(pane_map.items()):
+                if tmux_send(role_name, f"[User via Telegram to everyone]: {text}"):
+                    display = DISPLAY_NAMES.get(role_name, role_name)
+                    sent.append(display)
+                else:
+                    failed.append(role_name)
+
+            parts = []
+            if sent:
+                parts.append(f"→ <b>{', '.join(sent)}</b>")
+            if failed:
+                parts.append(f"Failed: {', '.join(failed)}")
+            await send_telegram(context.bot, update.effective_chat.id, "\n".join(parts) if parts else "No workers running.")
+            return
+
         # Send directly to the role's tmux pane
         success = tmux_send(target_pane, f"[User via Telegram]: {text}")
 
