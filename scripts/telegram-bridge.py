@@ -708,9 +708,11 @@ async def run_bot() -> None:
         target_label = "📋 Max"
 
         # Check if replying to a message from a specific role: [role-name] ...
+        # Role badge can be in .text (regular message) or .caption (photo/document)
         reply = update.message.reply_to_message
-        if reply and reply.text:
-            match = re.match(r"\[([a-z][\w-]*)\]", reply.text)
+        reply_text = (reply.text or reply.caption or "") if reply else ""
+        if reply_text:
+            match = re.match(r"\[([a-z][\w-]*)\]", reply_text)
             if match:
                 role = match.group(1)
                 target_pane = ALIASES.get(role, role)
@@ -786,10 +788,11 @@ async def run_bot() -> None:
         target_pane = PM_PANE
         target_label = "📋 Max"
 
-        # Check reply context
+        # Check reply context (role badge can be in .text or .caption)
         reply = msg.reply_to_message
-        if reply and reply.text:
-            match = re.match(r"\[([a-z][\w-]*)\]", reply.text)
+        reply_text = (reply.text or reply.caption or "") if reply else ""
+        if reply_text:
+            match = re.match(r"\[([a-z][\w-]*)\]", reply_text)
             if match:
                 role = match.group(1)
                 target_pane = ALIASES.get(role, role)
