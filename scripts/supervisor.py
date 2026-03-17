@@ -474,15 +474,10 @@ class Supervisor:
         if not pane:
             return
 
-        # Code workers cd into their isolated environment
         worker_dir = RUNTIME_DIR / "workers" / role
-        self._worker_dirs[role] = str(worker_dir) if worker_dir.is_dir() else ""
-        if worker_dir.is_dir():
-            self.tmux.send_keys(pane, f"cd '{worker_dir}'")
-            time.sleep(1)
-            console.print(f"[cyan]◆[/cyan] {role} → {worker_dir}")
-        else:
-            console.print(f"[cyan]◆[/cyan] {role} → workspace root")
+        launch_dir = worker_dir if worker_dir.is_dir() else PROJECT_DIR
+        self._worker_dirs[role] = str(launch_dir) if worker_dir.is_dir() else ""
+        console.print(f"[cyan]◆[/cyan] {role} → {launch_dir}")
 
         db_path = RUNTIME_DIR / "relay.db"
         gh_token = self._resolve_gh_token(role)
@@ -491,11 +486,13 @@ class Supervisor:
         # Shell scripts (notify-user.sh, send-file.sh) read .env.octobots
         # fresh on every invocation, so edits take effect immediately
         # without restarting workers.
-        cmd = (
+        claude_cmd = (
             f"{gh_env}OCTOBOTS_ID={role} OCTOBOTS_DB={db_path} "
             f"CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 "
             f"claude --add-dir '{role_dir}' --dangerously-skip-permissions"
         )
+        # cd + launch in one atomic command so Claude starts from launch_dir.
+        cmd = f"cd '{launch_dir}' && {claude_cmd}"
         self.tmux.send_keys(pane, cmd, confirm_paste=True)
         self.launched.add(role)
         time.sleep(3)
