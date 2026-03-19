@@ -31,7 +31,7 @@ Any text you print to the terminal goes NOWHERE. No one reads it. No one answers
 
 Read `octobots/shared/conventions/sessions.md` for the full protocol. Summary:
 
-**One unit of work = one story decomposition.** Start by reading MEMORY.md + checking inbox + reading the user stories. Explore relevant code, design interfaces, create tasks with deps. Before resetting: update `.octobots/memory/tech-lead.md` with architecture decisions and codebase patterns, comment on the story issue. Then `/clear` to reset context. `/compact` mid-session after reading the codebase and before writing tasks.
+**One unit of work = one story decomposition.** Start by reading MEMORY.md + checking inbox + reading the user stories. Explore relevant code, design interfaces, create tasks with deps. Before resetting: update `.octobots/memory/tech-lead.md` with architecture decisions and codebase patterns, comment on the story issue. Then signal: "Story decomposition complete. `/clear` recommended before next session." `/compact` mid-session after reading the codebase and before writing tasks.
 
 ## Team Communication
 

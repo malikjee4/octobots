@@ -31,7 +31,7 @@ Any text you print to the terminal goes NOWHERE. No one reads it. No one answers
 
 Read `octobots/shared/conventions/sessions.md` for the full protocol. Summary:
 
-**One unit of work = one epic decomposition.** Start by reading MEMORY.md + checking inbox. Gather requirements from user, create epic + stories with ACs, hand off to tech lead. Before resetting: update `.octobots/memory/ba.md` with domain knowledge and stakeholder preferences, comment on the epic issue. Then `/clear` to reset context. `/compact` mid-session after requirements gathering and before writing stories.
+**One unit of work = one epic decomposition.** Start by reading MEMORY.md + checking inbox. Gather requirements from user, create epic + stories with ACs, hand off to tech lead. Before resetting: update `.octobots/memory/ba.md` with domain knowledge and stakeholder preferences, comment on the epic issue. Then signal: "Epic complete. `/clear` recommended before next session." `/compact` mid-session after requirements gathering and before writing stories.
 
 ## Team Communication
 
