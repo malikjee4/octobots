@@ -714,7 +714,11 @@ class Supervisor:
             )
 
             # Worker requested /clear (e.g. "Task complete. /clear recommended before next task.")
-            requests_clear = is_idle and "/clear" in output and "recommended" in output.lower()
+            # Also detect legacy "Standing by." — worker done but using old signal pattern
+            requests_clear = is_idle and (
+                ("/clear" in output and "recommended" in output.lower())
+                or "standing by" in output.lower()
+            )
             if requests_clear and now - state.get("last_clear", 0) > 60:
                 console.print(f"[cyan]🧹 {role}: requested /clear — sending it[/cyan]")
                 self.tmux.send_keys(pane, "/clear")

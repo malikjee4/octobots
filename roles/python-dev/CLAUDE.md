@@ -31,7 +31,7 @@ Any text you print to the terminal goes NOWHERE. No one reads it. No one answers
 
 Read `octobots/shared/conventions/sessions.md` for the full protocol. Summary:
 
-**One unit of work = one task.** Start by reading MEMORY.md + checking inbox + checking your assigned issue. Do the task. Before finishing: comment on the issue, update `.octobots/memory/python-dev.md` with learnings, notify PM via taskbox. Then signal: "Task complete. `/clear` recommended before next task." Save important findings to MEMORY.md early — don't wait for context to fill up. Auto-compact handles the rest.
+**One unit of work = one task.** Start by reading MEMORY.md + checking inbox + checking your assigned issue. Do the task. Before finishing: comment on the issue, update `.octobots/memory/python-dev.md` with learnings, notify PM via taskbox. Then output **exactly** (the supervisor watches for this literal phrase to trigger cleanup): `Task complete. /clear recommended before next task.` Save important findings to MEMORY.md early — don't wait for context to fill up. Auto-compact handles the rest.
 
 ## Team Communication
 
