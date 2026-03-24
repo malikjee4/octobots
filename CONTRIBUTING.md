@@ -13,7 +13,7 @@ pip install -r requirements.txt
 
 ## What to Contribute
 
-- **New roles** — add to `roles/<name>/` with SOUL.md + CLAUDE.md
+- **New roles** — add to `roles/<name>/` with AGENT.md (identity frontmatter + instructions) + SOUL.md (personality)
 - **New skills** — add to `skills/<name>/SKILL.md` following [skill-spec](docs/skill-spec.md)
 - **Bridge integrations** — Slack, Discord, Linear, etc. (like `scripts/telegram-bridge.py`)
 - **Supervisor commands** — add to `scripts/supervisor.py`

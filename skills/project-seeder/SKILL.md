@@ -16,7 +16,8 @@ Generate the configuration files that octobots roles need to work in a project.
 
 ```
 project-root/
-├── AGENTS.md                     ← Main project context (all roles read this)
+├── CLAUDE.md                     ← Auto-loaded by Claude Code: brief project context
+├── AGENTS.md                     ← Full team reference: stack, commands, conventions
 └── .octobots/
     ├── profile.md                ← Quick-reference project card
     ├── architecture.md           ← System design map (if complex enough)
@@ -26,9 +27,36 @@ project-root/
 
 Not every project needs all files. Skip what's not relevant.
 
-## Step 1: Generate AGENTS.md
+## Step 1: Generate CLAUDE.md
 
-This is the most important output. Every role reads it. Use the template in `references/templates.md` and fill it with actual findings.
+This is the most immediately impactful file. Claude Code loads it automatically at the start of every session, so every agent has project context without doing anything. **Keep it under 80 lines.**
+
+**Check first — it may already exist:**
+
+```bash
+cat CLAUDE.md 2>/dev/null && echo "EXISTS" || echo "NOT FOUND"
+```
+
+- **If it doesn't exist:** create it fresh from the template in `references/templates.md`
+- **If it exists:** treat it as the engineer's carefully crafted document. Read the whole thing before touching anything. Make only surgical additions for genuinely missing facts (e.g. a command you verified that isn't listed). Fix only clear errors (e.g. a command that doesn't exist in the project). Do not restructure, reword, or "improve" prose — the wording is intentional. When in doubt, leave it alone and ask the engineer directly in the terminal.
+
+**What belongs here:**
+- One-paragraph project overview
+- The 3-5 most important commands (install, dev, test)
+- Critical conventions an agent must follow to not break things
+- Key paths (entry points, test dirs, config files)
+- A pointer to `AGENTS.md` for full detail
+
+**What does NOT belong here:**
+- Exhaustive command lists (that's AGENTS.md)
+- Full architecture diagrams (`.octobots/architecture.md`)
+- Long convention catalogues (`.octobots/conventions.md`)
+
+Use the `CLAUDE.md` template in `references/templates.md` as a reference for structure.
+
+## Step 2: Generate AGENTS.md
+
+The full team reference. Every role reads it on-demand. Use the template in `references/templates.md` and fill it with actual findings.
 
 **Key sections:**
 - Project overview (1 paragraph)
@@ -46,7 +74,7 @@ This is the most important output. Every role reads it. Use the template in `ref
 - Note inconsistencies: "README says `npm test` but CI runs `npx jest --ci`"
 - Keep it under 200 lines. Link to `.octobots/` files for details.
 
-## Step 2: Generate .octobots/profile.md
+## Step 3: Generate .octobots/profile.md
 
 Quick-reference card with YAML frontmatter:
 
@@ -60,7 +88,7 @@ languages: [python, typescript]
 ---
 ```
 
-## Step 3: Generate .octobots/conventions.md (if patterns detected)
+## Step 4: Generate .octobots/conventions.md (if patterns detected)
 
 Only create if you found clear patterns. Document what IS, not what should be.
 
@@ -71,7 +99,7 @@ Structure:
 - Code organization (layers, modules)
 - Comment/documentation style
 
-## Step 4: Generate .octobots/architecture.md (if complex)
+## Step 5: Generate .octobots/architecture.md (if complex)
 
 Only for multi-service or non-trivial architectures:
 - Service/component map
@@ -80,7 +108,7 @@ Only for multi-service or non-trivial architectures:
 - Database schema overview
 - Infrastructure diagram (text-based)
 
-## Step 5: Generate .octobots/testing.md (if test infra exists)
+## Step 6: Generate .octobots/testing.md (if test infra exists)
 
 QA engineer reads this. Include:
 - Test framework and config
@@ -96,14 +124,17 @@ QA engineer reads this. Include:
 After generating, verify:
 
 ```bash
-# Files exist
-ls AGENTS.md .octobots/profile.md
+# Core files exist
+ls CLAUDE.md AGENTS.md .octobots/profile.md
+
+# CLAUDE.md is brief (auto-loaded — must not be bloated)
+wc -l CLAUDE.md  # should be under 80 lines
 
 # AGENTS.md is readable
 wc -l AGENTS.md  # should be under 200 lines
 
-# No secrets leaked
-grep -ri "password\|secret\|token\|api_key" AGENTS.md .octobots/ || echo "clean"
+# No secrets leaked in either
+grep -ri "password\|secret\|token\|api_key" CLAUDE.md AGENTS.md .octobots/ || echo "clean"
 ```
 
 ## Details

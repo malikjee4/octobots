@@ -215,7 +215,7 @@ Commands appear in Telegram's command menu (the `/` button).
 
 ```
 octobots/              ← framework (git pull for updates, read-only)
-├── roles/               base role templates (SOUL.md + CLAUDE.md)
+├── roles/               base role templates (AGENT.md + SOUL.md)
 ├── skills/              base skills
 ├── shared/              conventions, agents
 └── scripts/             supervisor, bridge, scheduler, roles, relay
@@ -273,7 +273,7 @@ Configured in project root's `.mcp.json`. All roles share it. Contains API token
 ```bash
 # Copy base role and modify
 cp -r octobots/roles/python-dev/ .octobots/roles/python-dev/
-# Edit .octobots/roles/python-dev/CLAUDE.md with project-specific instructions
+# Edit .octobots/roles/python-dev/AGENT.md with project-specific instructions
 # .octobots/ version takes priority over octobots/ version
 ```
 
@@ -281,7 +281,7 @@ cp -r octobots/roles/python-dev/ .octobots/roles/python-dev/
 
 ```bash
 mkdir -p .octobots/roles/devops
-# Create SOUL.md + CLAUDE.md
+# Create AGENT.md (identity frontmatter + instructions) + SOUL.md (personality)
 # Auto-discovered by supervisor on next restart
 ```
 

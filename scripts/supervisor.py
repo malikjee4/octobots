@@ -360,8 +360,8 @@ class TmuxManager:
 # ── Role Resolution ─────────────────────────────────────────────────────────
 
 def resolve_role(role: str) -> Path | None:
-    local = LOCAL_ROLES / role / "CLAUDE.md"
-    base = BASE_ROLES / role / "CLAUDE.md"
+    local = LOCAL_ROLES / role / "AGENT.md"
+    base = BASE_ROLES / role / "AGENT.md"
     if local.is_file():
         return local.parent
     if base.is_file():
@@ -387,7 +387,7 @@ def discover_workers() -> list[str]:
             role = role_dir.name
             if role in seen or role in excluded:
                 continue
-            if (role_dir / "CLAUDE.md").is_file():
+            if (role_dir / "AGENT.md").is_file():
                 seen.add(role)
                 workers.append(role)
 
@@ -525,7 +525,7 @@ class Supervisor:
     def _launch_worker(self, role: str) -> None:
         role_dir = resolve_role(role)
         if not role_dir:
-            console.print(f"[red]✗ {role}: CLAUDE.md not found[/red]")
+            console.print(f"[red]✗ {role}: AGENT.md not found[/red]")
             return
 
         pane = self.tmux.panes.get(role, "")
@@ -548,10 +548,32 @@ class Supervisor:
         # Shell scripts (notify-user.sh, send-file.sh) read .env.octobots
         # fresh on every invocation, so edits take effect immediately
         # without restarting workers.
+
+        # Register role as a named agent: symlink role_dir into .claude/agents/<role>
+        # so `claude --agent <role>` can discover AGENT.md and show the name in the prompt.
+        agents_dir = launch_dir / ".claude" / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        agent_link = agents_dir / role
+        if agent_link.is_symlink() and agent_link.resolve() != role_dir.resolve():
+            agent_link.unlink()
+        if not agent_link.exists():
+            agent_link.symlink_to(role_dir)
+
+        # Symlink project CLAUDE.md into isolated worker dirs so Claude auto-loads
+        # project context even when the worker runs from a worktree, not project root.
+        if launch_dir != PROJECT_DIR:
+            project_claude = PROJECT_DIR / "CLAUDE.md"
+            worker_claude = launch_dir / "CLAUDE.md"
+            if project_claude.is_file():
+                if worker_claude.is_symlink() and worker_claude.resolve() != project_claude.resolve():
+                    worker_claude.unlink()
+                if not worker_claude.exists():
+                    worker_claude.symlink_to(project_claude)
+
         claude_cmd = (
             f"{gh_env}OCTOBOTS_ID={role} OCTOBOTS_DB={db_path} "
             f"CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 "
-            f"claude --add-dir '{role_dir}' --dangerously-skip-permissions"
+            f"claude --agent '{role}' --dangerously-skip-permissions"
         )
         # cd + launch in one atomic command so Claude starts from launch_dir.
         cmd = f"cd '{launch_dir}' && {claude_cmd}"

@@ -113,8 +113,8 @@ octobots/                            ← FRAMEWORK (git pull, read-only)
 ├── supervisor.sh                      Thin wrapper → scripts/supervisor.py
 ├── start.sh                           Launch a role interactively
 ├── roles/<role>/                      Base role templates
+│   ├── AGENT.md                         Identity (frontmatter) + technical instructions
 │   ├── SOUL.md                          Personality, voice, quirks
-│   ├── CLAUDE.md                        Technical instructions
 │   └── .claude/{skills,agents}/ →       Symlinks to shared
 ├── shared/
 │   ├── agents/                        Shared agents (rca-investigator, etc.)
@@ -194,7 +194,7 @@ tmux attach -t octobots:python-dev
 
 ```bash
 mkdir -p octobots/roles/my-role/.claude/{skills,agents}
-# Create SOUL.md, CLAUDE.md, MEMORY.md
+# Create AGENT.md (identity frontmatter + technical instructions) and SOUL.md (personality)
 # Symlink skills and agents:
 cd octobots
 for skill in skills/*; do

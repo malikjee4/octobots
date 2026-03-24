@@ -28,12 +28,29 @@ LOCAL_ROLES="$PROJECT_DIR/.octobots/roles"
 # ── Resolve role directory (.octobots/ overrides octobots/) ───────────────
 resolve_role() {
     local role="$1"
-    if [[ -f "$LOCAL_ROLES/$role/CLAUDE.md" ]]; then
+    if [[ -f "$LOCAL_ROLES/$role/AGENT.md" ]]; then
         echo "$LOCAL_ROLES/$role"
-    elif [[ -f "$BASE_ROLES/$role/CLAUDE.md" ]]; then
+    elif [[ -f "$BASE_ROLES/$role/AGENT.md" ]]; then
         echo "$BASE_ROLES/$role"
     else
         echo ""
+    fi
+}
+
+# Register the role as a Claude agent by symlinking into .claude/agents/<role>
+# so that `claude --agent <role>` can discover the AGENT.md identity file.
+register_agent() {
+    local role="$1"
+    local role_dir="$2"
+    local agents_dir="$PROJECT_DIR/.claude/agents"
+    mkdir -p "$agents_dir"
+    local link="$agents_dir/$role"
+    # Remove stale symlink (e.g. if role_dir changed between local/base)
+    if [[ -L "$link" && "$(readlink "$link")" != "$role_dir" ]]; then
+        rm "$link"
+    fi
+    if [[ ! -e "$link" ]]; then
+        ln -s "$role_dir" "$link"
     fi
 }
 
@@ -48,8 +65,10 @@ if [[ "${1:-}" == "--list" ]]; then
             role="$(basename "$role_dir")"
             [[ -n "${seen[$role]:-}" ]] && continue
             seen[$role]=1
-            if [[ -f "$role_dir/CLAUDE.md" ]]; then
-                desc=$(grep -m1 '^# ' "$role_dir/CLAUDE.md" | sed 's/^# //')
+            if [[ -f "$role_dir/AGENT.md" ]]; then
+                desc=$(grep -m1 '^description:' "$role_dir/AGENT.md" | sed 's/^description:[[:space:]]*//')
+                # Strip YAML block scalar indicator if present (e.g. ">")
+                [[ "$desc" == ">" ]] && desc=$(awk '/^description:/{found=1;next} found && /^[[:space:]]/{gsub(/^[[:space:]]+/,""); printf $0" "; next} found{exit}' "$role_dir/AGENT.md")
                 source=""
                 [[ "$roles_dir" == "$LOCAL_ROLES" ]] && source=" (project)"
                 echo "  $role  —  $desc$source"
@@ -77,6 +96,9 @@ mkdir -p "$PROJECT_DIR/.octobots/memory"
 export OCTOBOTS_DB="$PROJECT_DIR/.octobots/relay.db"
 python3 "$SCRIPT_DIR/skills/taskbox/scripts/relay.py" init > /dev/null 2>&1 || true
 
+# ── Register role as a named agent ───────────────────────────────────────
+register_agent "$ROLE" "$ROLE_DIR"
+
 # ── Build command ────────────────────────────────────────────────────────
 CMD=(
     env
@@ -84,7 +106,7 @@ CMD=(
     "OCTOBOTS_DB=$OCTOBOTS_DB"
     "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1"
     claude
-    --add-dir "$ROLE_DIR"
+    --agent "$ROLE"
     --dangerously-skip-permissions
 )
 

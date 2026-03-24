@@ -1,5 +1,58 @@
 # Project Seeder Templates
 
+## CLAUDE.md Template
+
+Auto-loaded by Claude Code at session start. **Keep under 80 lines.** Every agent reads this on every session — be ruthlessly concise.
+
+```markdown
+# Project Name
+
+One sentence: what it does and who it's for.
+
+## Stack
+
+- **Language/Runtime:** Python 3.12 / Node 20 / etc.
+- **Framework:** FastAPI / Next.js / Django / etc.
+- **Database:** PostgreSQL / SQLite / etc.
+- **Key tools:** [only what every dev touches daily]
+
+## Essential Commands
+
+```bash
+# Install
+[exact command]
+
+# Dev server
+[exact command]
+
+# Tests
+[exact command]
+
+# Lint / type-check
+[exact command]
+```
+
+## Critical Conventions
+
+<!-- Only the rules that will cause breakage or pain if ignored -->
+- [e.g. "Always run migrations before starting: `alembic upgrade head`"]
+- [e.g. "Use `pnpm`, not npm — lockfile is pnpm-lock.yaml"]
+- [e.g. "Feature branches only — never commit directly to main"]
+
+## Key Paths
+
+- Entry point: `src/main.py` / `app/page.tsx` / etc.
+- Tests: `tests/` — run with `[command]`
+- Config: `.env` (copy from `.env.example`)
+- [Any other path every dev needs to know]
+
+## Full Reference
+
+See `AGENTS.md` for complete stack details, conventions, CI/CD, and architecture.
+```
+
+---
+
 ## AGENTS.md Template
 
 ```markdown
