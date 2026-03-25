@@ -760,7 +760,7 @@ class Supervisor:
 
         # Standard symlinks into the project
         for src, name in [
-            (PROJECT_DIR / "octobots", "octobots"),
+            (OCTOBOTS_DIR, "octobots"),
             (RUNTIME_DIR, ".octobots"),
         ]:
             link = worker_dir / name

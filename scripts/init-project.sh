@@ -187,7 +187,7 @@ for worker in "${ALL_WORKERS[@]}"; do
     mkdir -p "$worker_dir"
 
     # Shared resources (symlinks, no clone needed)
-    ln -sf "$PROJECT_DIR/octobots" "$worker_dir/octobots"
+    ln -sf "$OCTOBOTS_DIR" "$worker_dir/octobots"
     ln -sf "$RUNTIME" "$worker_dir/.octobots"
     [[ -f "$PROJECT_DIR/AGENTS.md" ]] && ln -sf "$PROJECT_DIR/AGENTS.md" "$worker_dir/AGENTS.md"
     [[ -f "$PROJECT_DIR/.env" ]] && ln -sf "$PROJECT_DIR/.env" "$worker_dir/.env"

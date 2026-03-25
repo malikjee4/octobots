@@ -12,7 +12,9 @@ Run this from your **project root**:
 curl -fsSL https://raw.githubusercontent.com/arozumenko/octobots/main/install.sh | bash
 ```
 
-This clones `octobots/` into your project, installs Python deps, initializes `.octobots/`, and seeds `.claude/` with agents and skills.
+Downloads a tarball from GitHub, extracts to `/tmp`, copies the framework to `octobots/` in your project, installs Python deps, initializes `.octobots/`, and seeds `.claude/`. No nested git repo — `octobots/` is just files (gitignored automatically).
+
+Re-run at any time to update to the latest version.
 
 ## Quick Start
 
