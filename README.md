@@ -39,13 +39,13 @@ User (Telegram)
   │
   ▼ send-keys
 tmux "octobots"
-├── project-manager ← Max receives messages directly, distributes via taskbox
-├── python-dev      ← Py picks up tasks, works in git worktree
-├── js-dev          ← Jay picks up tasks, works in git worktree
-├── qa-engineer     ← Sage tests completed work in git worktree
+├── project-manager ← Max distributes via taskbox (reads board for live roster)
+├── python-dev      ← Py picks up tasks, works in isolated repo clone
+├── js-dev          ← Jay picks up tasks, works in isolated repo clone
+├── qa-engineer     ← Sage tests from project root (staging env)
 ├── ba              ← Alex writes user stories
 ├── tech-lead       ← Rio decomposes stories into tasks
-└── dashboard       ← all panes tiled, auto-refreshing
+└── [roles are dynamic — add/remove/clone at runtime without restart]
 
 Any role → notify-user.sh → Telegram (direct notifications)
 ```
@@ -54,9 +54,11 @@ Any role → notify-user.sh → Telegram (direct notifications)
 
 | Channel | Purpose | Persistence |
 |---------|---------|-------------|
-| **board.md** | Shared team state (decisions, blockers, findings) | In .octobots/ |
+| **board.md** | Team state — supervisor writes `## Team` (roster) and `## Active Work` (taskbox queue); agents write decisions, blockers, findings | In .octobots/ |
 | **Taskbox** | Inter-role task assignment and coordination | SQLite, ephemeral |
 | **GitHub Issues** | Permanent audit trail (every action gets a comment) | Forever |
+
+The board is the single shared state file. PM reads it before routing any task — the `## Team` section tells it who is actually running and which Worker ID to use in taskbox.
 
 ### Session Management
 
@@ -72,16 +74,17 @@ No context blowup. Each task has its own session. Fully resumable.
 
 ### Worker Isolation
 
-Code-writing roles (python-dev, js-dev, qa-engineer) get their own isolated environment per worker:
+Workers with `workspace: clone` in their `AGENT.md` frontmatter get isolated repo clones. Other workers share the project root via symlinks.
 
 ```
 .octobots/workers/
-├── python-dev/    ← own repo clones, own branch, own .env
-├── js-dev/        ← own repo clones
-└── qa-engineer/   ← own repo clones
+├── python-dev/    ← own repo clones, own branch, own .env  (workspace: clone)
+└── js-dev/        ← own repo clones                         (workspace: clone)
 ```
 
-No file conflicts between parallel workers. PRs are where integration happens.
+`qa-engineer` runs from the project root — it reads staging state and doesn't write code, so no clone is needed.
+
+Each role also declares which skills it uses via `skills:` frontmatter — workers only get symlinks for those skills, not all skills.
 
 ## Scheduling & Loops
 
@@ -105,6 +108,8 @@ Workers can self-restart to pick up new skills/agents:
 ```bash
 relay.py send --from $OCTOBOTS_ID --to supervisor "restart"
 ```
+
+The supervisor also holds pending taskbox messages until a worker's current task is acked — no message pile-up on busy workers.
 
 ## Structure
 
@@ -130,15 +135,15 @@ octobots/                            ← FRAMEWORK (git pull, read-only)
     └── requirements.txt               Python deps (rich, telegram, dotenv)
 
 .octobots/                           ← RUNTIME (project-specific, read/write)
-├── board.md                           Team whiteboard
+├── board.md                           Team board — Team + Active Work (supervisor); rest (agents)
 ├── memory/<role>.md                   Per-role persistent learnings
 ├── roles/                             Project role overrides
 ├── skills/                            Project-specific skills
 ├── agents/                            Project-specific agents
 ├── workers/                           Isolated worker environments
-│   ├── python-dev/                      Own repo clones + shared venv
-│   ├── js-dev/                          Own repo clones
-│   └── qa-engineer/                     Own repo clones
+│   ├── python-dev/                      Own repo clones + own .claude/ (filtered skills)
+│   ├── js-dev/                          Own repo clones + own .claude/
+│   └── <role>-2/                        Clone of a role, own workspace
 ├── relay.db                           Taskbox database
 ├── schedule.json                      Scheduled jobs (persistent)
 └── profile.md, conventions.md, ...    Scout output
@@ -190,19 +195,46 @@ tmux attach -t octobots:python-dev
 9. Any role → User (notify-user.sh): status updates via Telegram
 ```
 
-## Adding a New Role
+## Dynamic Team Management
+
+Roles and skills can be added, removed, and cloned at runtime — no supervisor restart needed.
+
+### Adding / removing roles
 
 ```bash
-mkdir -p octobots/roles/my-role/.claude/{skills,agents}
-# Create AGENT.md (identity frontmatter + technical instructions) and SOUL.md (personality)
-# Symlink skills and agents:
-cd octobots
-for skill in skills/*; do
-  ln -s "../../../../$skill" "roles/my-role/.claude/skills/$(basename $skill)"
-done
-ln -s "../../../../shared/agents/taskbox-listener" "roles/my-role/.claude/agents/taskbox-listener"
-# Role auto-discovered by supervisor on next restart
+# In the supervisor prompt:
+/role list                      # see available roles and which are active
+/role add my-role               # start a role (from octobots/roles/ or .claude/agents/)
+/role remove my-role            # stop + clear workspace
+/role clone python-dev          # spawn python-dev-2 with own isolated workspace
+/role clone python-dev py-auth  # explicit alias
 ```
+
+If you create an agent in Claude Code (`.claude/agents/my-role/`), `/role add my-role` promotes it to `octobots/roles/my-role/` automatically and replaces it with a symlink.
+
+### Adding skills to a role
+
+```bash
+/skill python-dev tdd           # add skill live: symlink + update AGENT.md
+/skill all taskbox              # add to every worker at once
+```
+
+### Defining a new role from scratch
+
+Create `octobots/roles/my-role/AGENT.md` with frontmatter:
+
+```yaml
+---
+name: my-role
+description: One-line description of this role
+model: sonnet
+color: cyan
+skills: [taskbox, bugfix-workflow]   # only skills this role needs
+# workspace: clone                   # uncomment if this role writes code
+---
+```
+
+Add `SOUL.md` for personality, then `/role add my-role` to start it live.
 
 ## Documentation
 
