@@ -213,7 +213,7 @@ REPOS=()
 while IFS= read -r repo; do
     [[ "$repo" == "octobots" ]] && continue
     REPOS+=("$repo")
-done < <(find "$PROJECT_DIR" -maxdepth 3 -name ".git" -type d | sed "s|$PROJECT_DIR/||; s|/.git||" | sort)
+done < <(find "$PROJECT_DIR" -mindepth 2 -maxdepth 3 -name ".git" -type d | sed "s|$PROJECT_DIR/||; s|/.git||" | sort)
 
 if [[ ${#REPOS[@]} -gt 0 && ${#CLONE_WORKERS[@]} -gt 0 ]]; then
     echo ""
@@ -228,8 +228,12 @@ if [[ ${#REPOS[@]} -gt 0 && ${#CLONE_WORKERS[@]} -gt 0 ]]; then
             [[ -d "$worker_dir/$repo" ]] && continue
             origin_url=$(cd "$repo_path" && git remote get-url origin 2>/dev/null) || continue
             mkdir -p "$(dirname "$worker_dir/$repo")"
-            git clone --quiet "$origin_url" "$worker_dir/$repo" 2>/dev/null && (( cloned++ )) || \
-                echo "    ✗ $worker: failed to clone $repo"
+            if git clone --quiet "$origin_url" "$worker_dir/$repo" 2>/dev/null; then
+                (( cloned++ ))
+            else
+                echo "    ✗ $worker: failed to clone $repo (private repo or auth required)"
+                echo "      Fix manually:  git clone $origin_url $worker_dir/$repo"
+            fi
         done
 
         # Worker-specific .mcp.json (own browser, no shared CDP endpoint)
