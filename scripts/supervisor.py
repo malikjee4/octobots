@@ -614,6 +614,7 @@ class Supervisor:
             self._launch_worker(role)
 
         self.tmux.save_pane_map()
+        self._ensure_board()
         self._write_roster()
 
     def _launch_worker(self, role: str) -> None:
@@ -679,12 +680,25 @@ class Supervisor:
 
     # ── Board ────────────────────────────────────────────────────────────────
 
+    def _ensure_board(self) -> None:
+        """Create a default board.md if it doesn't exist."""
+        board_path = RUNTIME_DIR / "board.md"
+        if board_path.is_file():
+            return
+        board_path.parent.mkdir(parents=True, exist_ok=True)
+        board_path.write_text(
+            "# Team Board\n\n"
+            "## Team\n\n"
+            "_Supervisor-maintained. Route taskbox messages to the Worker ID, not the role name._\n\n"
+            "## Active Work\n\n"
+            "_No active tasks._\n"
+        )
+
     def _update_board_section(self, section: str, content: str) -> None:
         """Replace a named ## section in board.md, preserving all other sections."""
         import re as _re
         board_path = RUNTIME_DIR / "board.md"
-        if not board_path.is_file():
-            return
+        self._ensure_board()
         text = board_path.read_text()
         pattern = rf'(## {_re.escape(section)}\n).*?(?=\n## |\Z)'
         replacement = rf'\g<1>{content}'
