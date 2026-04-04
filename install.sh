@@ -103,24 +103,30 @@ fi
 echo ""
 echo "Installing skills..."
 if command -v npx &>/dev/null; then
-    PUBLISHED_SKILLS=(
-        "arozumenko/browser-verify"
-        "arozumenko/skill-tdd"
-        "arozumenko/skill-code-review"
-        "arozumenko/skill-git-workflow"
-        "arozumenko/skill-issue-tracking"
-        "arozumenko/skill-playwright-testing"
-    )
-    for skill_repo in "${PUBLISHED_SKILLS[@]}"; do
-        repo_name="${skill_repo##*/}"
-        skill_name="${repo_name#skill-}"
+    # Read skill list from skills.json registry (default:true entries)
+    PUBLISHED_SKILLS=()
+    SKILL_IDS=()
+    while IFS=$'\t' read -r skill_id skill_repo; do
+        PUBLISHED_SKILLS+=("$skill_repo")
+        SKILL_IDS+=("$skill_id")
+    done < <(python3 -c "
+import json, sys
+data = json.load(open('$DEST/skills.json'))
+for s in data.get('skills', []):
+    if s.get('default', True):
+        print(s['id'] + '\t' + s['repo'])
+" 2>/dev/null)
+
+    for i in "${!PUBLISHED_SKILLS[@]}"; do
+        skill_repo="${PUBLISHED_SKILLS[$i]}"
+        skill_name="${SKILL_IDS[$i]}"
         if [[ -d ".claude/skills/$skill_name" ]]; then
             echo "  ✓ $skill_name (already installed)"
         else
             if npx skills add "$skill_repo" --yes 2>/dev/null; then
                 echo "  ✓ $skill_name"
             else
-                echo "  ⚠  $skill_name — install failed, will use bundled fallback"
+                echo "  ⚠  $skill_name — install failed"
             fi
         fi
     done

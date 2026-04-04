@@ -1,0 +1,42 @@
+{
+  "_comment": "Octobots skill registry. Add entries here to make published skills installable during setup. Used by install.sh.",
+
+  "skills": [
+    {
+      "id": "browser-verify",
+      "repo": "arozumenko/browser-verify",
+      "description": "Browser verification via CDP — visual checks, screenshots, accessibility",
+      "default": true
+    },
+    {
+      "id": "tdd",
+      "repo": "arozumenko/skill-tdd",
+      "description": "Test-driven development workflow — red/green/refactor cycle",
+      "default": true
+    },
+    {
+      "id": "code-review",
+      "repo": "arozumenko/skill-code-review",
+      "description": "Structured code review — security, quality, conventions",
+      "default": true
+    },
+    {
+      "id": "git-workflow",
+      "repo": "arozumenko/skill-git-workflow",
+      "description": "Git branching, PR creation, and merge workflow",
+      "default": true
+    },
+    {
+      "id": "issue-tracking",
+      "repo": "arozumenko/skill-issue-tracking",
+      "description": "GitHub issue lifecycle — labelling, commenting, closing",
+      "default": true
+    },
+    {
+      "id": "playwright-testing",
+      "repo": "arozumenko/skill-playwright-testing",
+      "description": "End-to-end browser testing with Playwright",
+      "default": true
+    }
+  ]
+}

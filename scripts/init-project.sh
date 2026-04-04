@@ -310,6 +310,15 @@ WEOF
     echo "  $worker: ready"
 done
 
+# ── Install skill dependencies ────────────────────────────────────────────────
+if [[ ${#ALL_WORKERS[@]} -gt 0 ]]; then
+    echo ""
+    echo "Installing skill dependencies..."
+    for worker in "${ALL_WORKERS[@]}"; do
+        bash "$OCTOBOTS_DIR/scripts/setup-skill.sh" --role "$worker" 2>/dev/null || true
+    done
+fi
+
 # ── Clone repos into worker environments (code-writing workers only) ─────────
 REPOS=()
 while IFS= read -r repo; do
