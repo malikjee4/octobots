@@ -122,13 +122,21 @@ def main():
         print(f"  — {skills_dir} not found, skipping")
         return
 
+    bak_file = mcp_file.with_suffix(".json.bak")
+
     # Load existing .mcp.json
     if mcp_file.exists():
         try:
-            cfg = json.loads(mcp_file.read_text())
-        except (json.JSONDecodeError, OSError):
+            original_text = mcp_file.read_text()
+            cfg = json.loads(original_text)
+        except json.JSONDecodeError as e:
+            print(f"  ⚠  .mcp.json is invalid JSON — aborting to avoid data loss: {e}", file=sys.stderr)
+            return
+        except OSError:
+            original_text = None
             cfg = {}
     else:
+        original_text = None
         cfg = {}
     cfg.setdefault("mcpServers", {})
 
@@ -165,8 +173,33 @@ def main():
                 cfg["mcpServers"][name] = entry
                 added.append(f"{skill}/{name}")
 
-    if added or skipped:
-        mcp_file.write_text(json.dumps(cfg, indent=2) + "\n")
+    if added:
+        # Write backup before modifying
+        if original_text is not None:
+            bak_file.write_text(original_text)
+
+        new_text = json.dumps(cfg, indent=2) + "\n"
+
+        # Validate the JSON we're about to write, then write atomically
+        try:
+            json.loads(new_text)  # sanity check
+        except json.JSONDecodeError as e:
+            print(f"  ⚠  generated .mcp.json is invalid — aborting: {e}", file=sys.stderr)
+            return
+
+        tmp = mcp_file.with_suffix(".json.tmp")
+        try:
+            tmp.write_text(new_text)
+            tmp.replace(mcp_file)
+        except OSError as e:
+            tmp.unlink(missing_ok=True)
+            # Restore backup if we had one
+            if bak_file.exists():
+                bak_file.replace(mcp_file)
+            print(f"  ⚠  failed to write .mcp.json — {e}", file=sys.stderr)
+            return
+
+        print("  Backup: .mcp.json.bak")
 
     for s in added:
         print(f"  ✓ MCP: {s}")
