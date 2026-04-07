@@ -94,9 +94,13 @@ register_agent() {
     local agents_dir="$PROJECT_DIR/.claude/agents"
     mkdir -p "$agents_dir"
     local link="$agents_dir/$role"
-    # Remove stale symlink (e.g. if role_dir changed between local/base)
-    if [[ -L "$link" && "$(readlink "$link")" != "$role_dir" ]]; then
-        rm "$link"
+    # Remove stale symlink (changed target, broken, or self-looping). `[[ -e ]]`
+    # returns false for broken/looped symlinks, so an existing -L with no -e is
+    # always stale; otherwise compare the readlink target.
+    if [[ -L "$link" ]]; then
+        if [[ ! -e "$link" || "$(readlink "$link")" != "$role_dir" ]]; then
+            rm "$link"
+        fi
     fi
     if [[ ! -e "$link" ]]; then
         ln -s "$role_dir" "$link"

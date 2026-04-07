@@ -52,6 +52,12 @@
       "description": "OneTest QA — 13 specialist domains (a11y, security, UX, performance, privacy...)",
       "role": "qa-engineer",
       "group": "qa"
+    },
+    {
+      "id": "personal-assistant",
+      "repo": "arozumenko/personal-assistant-agent",
+      "description": "PA — second-brain personal assistant: signals, knowledge base, open loops",
+      "role": "personal-assistant"
     }
   ],
 
@@ -72,6 +78,12 @@
       "name": "Minimal starter",
       "description": "PM + Python Dev — quickstart, expand later",
       "agents": ["scout", "project-manager", "python-dev"],
+      "qa": null
+    },
+    {
+      "name": "Personal assistant only",
+      "description": "Solo PA — second-brain / journaling / inbox triage",
+      "agents": ["personal-assistant"],
       "qa": null
     },
     {

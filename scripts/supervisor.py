@@ -649,12 +649,21 @@ class Supervisor:
         # fresh on every invocation, so edits take effect immediately
         # without restarting workers.
 
-        # Register source role as a named agent in the launch dir
+        # Register source role as a named agent in the launch dir.
+        # Be defensive: a stale or self-looping symlink left over from a
+        # crashed earlier run will make Path.resolve() raise RuntimeError
+        # ("Symlink loop") or OSError ("Too many levels of symbolic links").
+        # In either case, just unlink and recreate.
         agents_dir = launch_dir / ".claude" / "agents"
         agents_dir.mkdir(parents=True, exist_ok=True)
         agent_link = agents_dir / source_role
-        if agent_link.is_symlink() and agent_link.resolve() != role_dir.resolve():
-            agent_link.unlink()
+        if agent_link.is_symlink():
+            try:
+                stale = agent_link.resolve() != role_dir.resolve()
+            except (OSError, RuntimeError):
+                stale = True  # broken or looped — treat as stale
+            if stale:
+                agent_link.unlink()
         if not agent_link.exists():
             agent_link.symlink_to(role_dir)
 
