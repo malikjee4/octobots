@@ -8,38 +8,42 @@ The user's only interface is **Telegram**.
 
 **Never ask questions, present options, or wait for input in your terminal output.**
 
-If you catch yourself writing "What do you think?", "Options:", "Awaiting direction", or anything that expects a human response — stop. Use `notify-user.sh` instead.
+If you catch yourself writing "What do you think?", "Options:", "Awaiting direction", or anything that expects a human response — stop. Use the `notify` MCP tool instead.
 
 ## How to Reach the User
 
-Any role can message the user directly via Telegram:
+Any role can message the user directly via Telegram by calling the **`notify` MCP tool** (`mcp__notify__notify`):
 
-```bash
-octobots/scripts/notify-user.sh "your message here"
+```
+notify(message="your message here")
 ```
 
-The script auto-tags your message with your role name: `[python-dev] your message here`.
+The tool auto-tags your message with your role name: `[python-dev] your message here`. Messages support HTML formatting: `<b>bold</b>`, `<i>italic</i>`, `<code>inline code</code>`, `<pre>code block</pre>`.
 
-Messages support HTML formatting: `<b>bold</b>`, `<i>italic</i>`, `<code>inline code</code>`, `<pre>code block</pre>`.
-
-**Long messages are auto-sent as documents.** If your message exceeds 4000 characters, `notify-user.sh` automatically sends it as a `.md` file attachment with a short caption preview. You don't need to do anything special.
+**Long messages are auto-sent as documents.** If your message exceeds 4000 characters, `notify` automatically writes it to a temp `.md` file and sends it as a document attachment with a short caption preview. You don't need to do anything special.
 
 ## Sending Files
 
-To send a file (epic document, analysis, test report, etc.) directly to the user:
+To send a file (epic document, screenshot, report, voice note, etc.) directly to the user, call the same tool with a `file` argument:
 
-```bash
-# Send an existing file
-octobots/scripts/send-file.sh /path/to/file.md "optional caption"
-
-# Pipe content as a file
-echo "$CONTENT" | octobots/scripts/send-file.sh --stdin "epic-001.md" "Epic ready for review"
+```
+notify(message="Epic ready for review", file="/abs/path/to/epic-001.md")
+notify(message="Login flow screenshot", file="/abs/path/to/login.png")
+notify(message="Daily voice brief",     file="/abs/path/to/brief.ogg")
 ```
 
-**When to send files vs text:**
-- **Short status/question (< 10 lines):** use `notify-user.sh` — appears inline in chat
-- **Documents, reports, epics, stories:** use `send-file.sh` — user gets a downloadable file
-- **Long output you didn't plan for:** just use `notify-user.sh` — it auto-converts to a document if over 4000 chars
+The transport is chosen automatically by file extension:
+
+- `.jpg/.jpeg/.png/.webp/.gif` → photo
+- `.ogg/.oga/.opus`            → voice note (voice-bubble UI)
+- `.mp3/.m4a/.aac/.flac/.wav`  → audio player
+- anything else                → document (raw bytes preserved)
+
+**When to attach a file vs send text:**
+- **Short status/question (< 10 lines):** plain `notify(message=...)` — appears inline in chat
+- **Documents, reports, epics, stories, screenshots:** `notify(message=..., file=...)` — user gets a downloadable file with the message as caption
+- **Long output you didn't plan for:** just plain `notify(message=...)` — it auto-converts to a document if over 4000 chars
+
 
 ## Writing Good Telegram Messages
 
@@ -120,9 +124,9 @@ Telegram is async. The user may not reply immediately.
 
 | Need | Channel | Who |
 |------|---------|-----|
-| Tell the user something | `notify-user.sh` | Any role |
-| Ask the user something | `notify-user.sh` + your recommendation | Any role |
-| Send a document/report | `send-file.sh` | Any role |
+| Tell the user something | `notify` MCP tool | Any role |
+| Ask the user something | `notify` MCP tool + your recommendation | Any role |
+| Send a document/report/image/voice | `notify(message=..., file=...)` | Any role |
 | Tell a teammate something | Taskbox | Any role |
 | Record a decision/result | GitHub issue comment | Any role |
 | Terminal output | **Nobody. Ever.** | — |

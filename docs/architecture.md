@@ -45,7 +45,7 @@ tmux "octobots" ─────────────────────�
 │ dashboard: all panes tiled, auto-refresh                │
 ──────────────────────────────────────────────────────────
 
-Any role → notify-user.sh → Telegram Bot API → User
+Any role → notify MCP tool → Telegram Bot API → User
 ```
 
 ### Three Communication Channels
@@ -58,12 +58,17 @@ Any role → notify-user.sh → Telegram Bot API → User
 
 ### Notifications
 
-Any role can notify the user directly via Telegram:
-```bash
-octobots/scripts/notify-user.sh "Task #103 complete. PR #45 ready."
+Any role can notify the user directly via Telegram by calling the `notify`
+MCP tool (`mcp__notify__notify`):
+
+```
+notify(message="Task #103 complete. PR #45 ready.")
+notify(message="QA report attached", file="/abs/path/to/report.md")
 ```
 
-No taskbox, no PM intermediary. Direct Bot API call.
+No taskbox, no PM intermediary. The MCP server is a thin wrapper around
+`octobots/scripts/notify_lib.py` (Python urllib → Telegram Bot API), which
+is also used by the supervisor itself for internal "stuck role" warnings.
 
 ## Pipeline Flow
 
@@ -76,7 +81,7 @@ No taskbox, no PM intermediary. Direct Bot API call.
 6. Py/Jay work in git worktrees, commit, create PRs
 7. Max → Sage (taskbox): "Verify #103"
 8. Sage tests, reports on GitHub issue
-9. Any role → User (notify-user.sh): "Task complete" via Telegram
+9. Any role → User (notify MCP tool): "Task complete" via Telegram
 ```
 
 ## Session Management

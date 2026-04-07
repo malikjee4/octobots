@@ -677,8 +677,8 @@ class Supervisor:
         gh_token = self._resolve_gh_token(source_role)
         gh_env = f"GH_TOKEN={gh_token} " if gh_token else ""
         # NOTE: Do NOT pass OCTOBOTS_TG_TOKEN/OCTOBOTS_TG_OWNER here.
-        # Shell scripts (notify-user.sh, send-file.sh) read .env.octobots
-        # fresh on every invocation, so edits take effect immediately
+        # The notify MCP server (and notify_lib) reload .env.octobots fresh
+        # on every call, so credential edits take effect immediately
         # without restarting workers.
 
         # Register source role as a named agent in the launch dir.
@@ -1250,7 +1250,6 @@ class Supervisor:
             return
 
         # Build single-line task prompt
-        notify_cmd = f"octobots/scripts/notify-user.sh"
         relay_cmd = f"python3 {RELAY_SCRIPT}"
 
         prompt = (
@@ -1258,7 +1257,7 @@ class Supervisor:
             f"-- RULES: You MUST respond to this message. "
             f"If it is a task: do the work, then 1) comment on the GitHub issue, "
             f"2) run: {relay_cmd} ack {msg_id} \"your summary\", "
-            f"3) run: {notify_cmd} \"Done: summary\". "
+            f"3) call the `notify` MCP tool: notify(message=\"Done: summary\"). "
             f"If it is a question: answer via {relay_cmd} ack {msg_id} \"your answer\". "
             f"NEVER ignore a message. Silence breaks the pipeline."
         )
@@ -1500,7 +1499,7 @@ class Supervisor:
                     f"[supervisor] Your context is at {used:,}/{limit:,} tokens "
                     f"({pct:.0f}%). Flush any in-progress state, open loops, and "
                     f"important context to your MEMORY.md NOW using the Write tool. "
-                    f"Do NOT reply to the user via notify-user.sh — this is "
+                    f"Do NOT reply to the user via the notify MCP tool — this is "
                     f"internal housekeeping. Your session will be cleared in "
                     f"{int(grace_s)}s and you'll be told to re-read your persona "
                     f"files afterward."
@@ -1699,16 +1698,20 @@ class Supervisor:
                 console.print(f"[yellow]🔔 {role}: silent {silence_min:.0f}min, board has tasks but no relay messages[/yellow]")
 
             if state["nudge_count"] >= 2:
-                # Second nudge — escalate to user
+                # Second nudge — escalate to user via shared notify_lib
                 try:
-                    notify_cmd = PROJECT_DIR / "octobots/scripts/notify-user.sh"
-                    if notify_cmd.is_file():
-                        import subprocess as _sub
-                        _sub.Popen(
-                            ["bash", str(notify_cmd),
-                             f"⚠ {role} has been silent for {silence_min:.0f} minutes and may be stuck. Check /logs {role}"],
-                            cwd=str(PROJECT_DIR),
-                        )
+                    import sys as _sys
+                    _scripts_dir = str(Path(__file__).resolve().parent)
+                    if _scripts_dir not in _sys.path:
+                        _sys.path.insert(0, _scripts_dir)
+                    from notify_lib import send_notification as _notify
+                    _notify(
+                        message=(
+                            f"⚠ {role} has been silent for {silence_min:.0f} minutes "
+                            f"and may be stuck. Check /logs {role}"
+                        ),
+                        from_role="supervisor",
+                    )
                 except Exception:
                     pass
                 console.print(f"[red]⚠ {role}: still silent after requeue — user notified[/red]")

@@ -385,8 +385,37 @@ generate_worker_claude() {
 - **Send message**: \`python octobots/skills/taskbox/scripts/relay.py send --from $worker --to <role> "message"\`
 - **Ack message**: \`python octobots/skills/taskbox/scripts/relay.py ack MSG_ID "summary"\`
 - **Memory file**: \`.octobots/memory/$worker.md\`
-- **Notify user**: \`octobots/scripts/notify-user.sh "message"\`
 - **Active skills**: ${skills_val:-all}
+
+## Notifying the user (Telegram)
+
+Use the **\`notify\` MCP tool** (\`mcp__notify__notify\`) — never print messages
+as plain text and never embed long payloads inside Bash commands.
+
+**Send a short text message** (auto-prefixed with your role badge):
+\`\`\`
+notify(message="Deployed v1.2 to staging — ready for QA")
+\`\`\`
+
+**Send a long message or report** (>4000 chars is auto-uploaded as a .md file):
+\`\`\`
+notify(message="…full report markdown here…")
+\`\`\`
+
+**Send a file as an attachment** (any type — .md, .pdf, .png, .ogg, .log, .zip, …):
+\`\`\`
+notify(message="QA report for #103", file=".octobots/reports/qa-103.pdf")
+\`\`\`
+\`message\` becomes the Telegram caption, \`file\` is the path to upload.
+The transport (photo / voice / audio / document) is chosen automatically by
+file extension. Use this for screenshots, voice notes, logs, PDFs, or anything
+you want delivered as a file rather than inline text.
+
+Rules:
+- One Bash tool call per notification. Do not chain or background it.
+- First positional arg = message/caption. Optional: \`--file <path>\` to attach.
+- Messages longer than 4000 chars without \`--file\` are auto-uploaded as .md.
+- If Telegram is not configured the script exits 0 with \`{"status":"skipped"}\` — safe to ignore.
 OEOF
 
     # CLAUDE.md — only written once (user may customize it; OCTOBOTS.md is always regenerated)

@@ -40,7 +40,7 @@ ollama launch claude --model gemma4:26b --yes -- \
 
 …which is exactly the command you'd type by hand to run Claude Code against
 Ollama, just with octobots' env vars (`OCTOBOTS_ID`, `OCTOBOTS_DB`, etc.)
-preserved so taskbox / notify-user / GitHub bridges keep working.
+preserved so taskbox / notify MCP / GitHub bridges keep working.
 
 ## How role selection works
 

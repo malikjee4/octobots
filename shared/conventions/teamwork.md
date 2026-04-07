@@ -89,13 +89,17 @@ Never skip step 1. Steps 2-3 can be omitted for minor updates.
 
 ## Notify User (Telegram)
 
-Any role can send a notification directly to the user via Telegram:
+Any role can send a notification directly to the user via Telegram by calling
+the `notify` MCP tool (`mcp__notify__notify`):
 
-```bash
-octobots/scripts/notify-user.sh "Your message here"
+```
+notify(message="Your message here")
+notify(message="Report ready", file="/abs/path/to/report.md")
 ```
 
-The script reads `OCTOBOTS_ID` from env to tag the message with your role name.
+The tool reads `OCTOBOTS_ID` from env to tag the message with your role name,
+and routes file attachments to photo / voice / audio / document automatically
+based on extension. See `no-terminal-interaction.md` for details.
 
 **When to notify:**
 - Task completed

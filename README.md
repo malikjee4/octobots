@@ -60,7 +60,7 @@ tmux "octobots"
 ├── tech-lead       ← Rio decomposes stories into tasks
 └── [roles are dynamic — add/remove/clone at runtime without restart]
 
-Any role → notify-user.sh → Telegram (direct notifications)
+Any role → notify MCP tool → Telegram (direct notifications)
 ```
 
 ### Communication — Three Channels
@@ -143,7 +143,7 @@ octobots/                            ← FRAMEWORK (git pull, read-only)
     ├── telegram-bridge.py             Telegram ↔ tmux bridge
     ├── scheduler.py                   Schedule/loop engine
     ├── roles.py                       Shared role aliases (@pm, @qa, etc.)
-    ├── notify-user.sh                 Any role → Telegram notification
+    ├── notify_lib.py                  Telegram transport (used by notify MCP + supervisor)
     ├── init-project.sh                Initialize .octobots/ for a project
     └── requirements.txt               Python deps (rich, telegram, dotenv)
 
@@ -205,7 +205,7 @@ tmux attach -t octobots:python-dev
 6. Py/Jay work in worktrees, commit, create PRs
 7. Max → Sage (taskbox): "Verify #103"
 8. Sage tests, reports findings on GitHub issue
-9. Any role → User (notify-user.sh): status updates via Telegram
+9. Any role → User (notify MCP tool): status updates via Telegram
 ```
 
 ## Dynamic Team Management

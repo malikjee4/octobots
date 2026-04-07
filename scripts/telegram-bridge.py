@@ -3,11 +3,12 @@
 
 Architecture:
   User (Telegram) → bridge → tmux send-keys to worker panes
-  Any role → notify-user.sh → Telegram Bot API → User
+  Any role → notify MCP tool → notify_lib → Telegram Bot API → User
   Slash commands → read taskbox/schedule/tmux directly
 
 No taskbox for user ↔ PM. Taskbox is only for inter-role communication.
-Notifications from roles go directly via Telegram Bot API (notify-user.sh).
+Notifications from roles go directly via Telegram Bot API (the `notify` MCP
+tool, backed by octobots/scripts/notify_lib.py).
 
 Usage:
   python octobots/scripts/telegram-bridge.py

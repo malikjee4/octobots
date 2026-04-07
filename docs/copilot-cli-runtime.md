@@ -41,9 +41,9 @@ instead of `claude --agent ba --dangerously-skip-permissions`. Roles without a
    `--dangerously-skip-permissions`. Required because roles run in unattended
    tmux panes and must never block on a permission prompt.
 4. **Same env contract.** `OCTOBOTS_ID`, `OCTOBOTS_DB`, and the taskbox /
-   notify-user / GitHub bridges all work identically — they're shell scripts
-   that read env vars, not anything runtime-specific. The three-step task
-   completion ritual (issue comment → ack → notify-user) is unchanged.
+   notify MCP / GitHub bridges all work identically — they read env vars,
+   not anything runtime-specific. The three-step task completion ritual
+   (issue comment → ack → notify MCP tool) is unchanged.
 
 ## Capability matrix
 

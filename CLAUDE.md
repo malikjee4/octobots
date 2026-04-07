@@ -103,7 +103,7 @@ Tech Lead → PM: technical tasks
 PM → Dev (Py/Jay): assignments
 Dev → PM: PR created
 PM → QA (Sage): verify PR
-Any role → User: notify-user.sh → Telegram
+Any role → User: `notify` MCP tool → Telegram
 ```
 
 ### Supervisor (`scripts/supervisor.py`)
@@ -156,12 +156,12 @@ Created by `scripts/init-project.sh` in the target project, not in the octobots 
 
 ## Key Conventions
 
-**Terminal Rules (Critical):** Roles run in unattended tmux panes. They must never ask questions to stdout or present options and wait. All user communication goes through `scripts/notify-user.sh` (Telegram). All teammate communication goes through taskbox.
+**Terminal Rules (Critical):** Roles run in unattended tmux panes. They must never ask questions to stdout or present options and wait. All user communication goes through the `notify` MCP tool (`mcp__notify__notify`, defined in `mcp/notify/server.py` and registered in `.mcp.json`). The transport logic lives in `scripts/notify_lib.py` and is shared with the supervisor's own internal warnings. All teammate communication goes through taskbox.
 
 **Three-Step Task Completion (mandatory for all roles):**
 1. Comment on GitHub issue with results
 2. Ack the taskbox message
-3. Notify user via `notify-user.sh`
+3. Notify user via the `notify` MCP tool
 
 Skipping any step breaks the pipeline.
 
