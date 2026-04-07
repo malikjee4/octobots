@@ -799,6 +799,19 @@ class Supervisor:
             console.print(f"[red]✗ {role}: unknown runtime '{runtime}' (expected claude|copilot)[/red]")
             return
 
+        # Regenerate the role's memory snapshot so AGENT.md's @-import
+        # resolves to current curated memory + recent daily logs at session
+        # start. Failure here is non-fatal — the role will just see a stale
+        # (or missing) snapshot.
+        try:
+            subprocess.run(
+                ["python3", str(OCTOBOTS_DIR / "skills" / "memory" / "scripts" / "memory.py"),
+                 "--role", role, "snapshot"],
+                cwd=str(PROJECT_DIR), capture_output=True, timeout=10,
+            )
+        except Exception as e:
+            console.print(f"[dim yellow]memory snapshot for {role} skipped: {e}[/dim yellow]")
+
         # cd + launch in one atomic command so the agent starts from launch_dir.
         cmd = f"cd '{launch_dir}' && {agent_cmd}"
         self.tmux.send_keys(pane, cmd, confirm_paste=True)
@@ -1502,19 +1515,23 @@ class Supervisor:
             # Stage 2 → 0: send re-init prompt and reset state.
             if now - state["cleared_at"] < reinit_delay_s:
                 continue
+            # Regenerate snapshot.md so the @-import in AGENT.md surfaces
+            # whatever the role just checkpointed before /clear.
+            try:
+                subprocess.run(
+                    ["python3", str(OCTOBOTS_DIR / "skills" / "memory" / "scripts" / "memory.py"),
+                     "--role", role, "snapshot"],
+                    cwd=str(PROJECT_DIR), capture_output=True, timeout=10,
+                )
+            except Exception:
+                pass
             reinit_prompt = (
                 "[supervisor] Your session was just cleared to recover from "
-                "context pressure. Before doing anything else, re-read these "
-                "files to restore your identity and working state:\n"
-                "  1. Your AGENT.md and SOUL.md (in .claude/agents/<your-role>/)\n"
-                "  2. .octobots/persona/USER.md\n"
-                "  3. .octobots/persona/TOOLS.md\n"
-                "  4. .octobots/persona/access-control.yaml\n"
-                "  5. Your MEMORY.md (in .octobots/memory/)\n"
-                "  6. Open Loops.md in the Obsidian vault if you have one\n\n"
-                "Then sit idle and wait for the user. Do NOT reply via "
-                "notify-user.sh — this is internal housekeeping, not a user "
-                "message."
+                "context pressure. Your AGENT.md, SOUL.md, persona files, and "
+                "memory snapshot are still in your system prompt — you have "
+                "not lost your identity or curated memory. Sit idle and wait "
+                "for the user's next message. Do NOT send a Telegram reply — "
+                "this is internal housekeeping, not a user message."
             )
             self.tmux.send_keys(pane, reinit_prompt, confirm_paste=True)
             self._ollama_recycle.pop(role, None)

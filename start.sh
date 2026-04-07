@@ -149,6 +149,11 @@ mkdir -p "$PROJECT_DIR/.octobots/memory"
 export OCTOBOTS_DB="$PROJECT_DIR/.octobots/relay.db"
 python3 "$SCRIPT_DIR/skills/taskbox/scripts/relay.py" init > /dev/null 2>&1 || true
 
+# ── Regenerate memory snapshot for this role ─────────────────────────────
+# AGENT.md @-imports .octobots/memory/<role>/snapshot.md so curated memory
+# and recent daily logs land in the system prompt at session start.
+python3 "$SCRIPT_DIR/skills/memory/scripts/memory.py" --role "$ROLE" snapshot > /dev/null 2>&1 || true
+
 # ── Detect runtime (claude | copilot) from AGENT.md frontmatter ──────────
 # Default = claude. To opt a role into Copilot CLI, add `runtime: copilot`
 # to its AGENT.md frontmatter. Mixed teams are fine — every role decides
