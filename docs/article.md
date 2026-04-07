@@ -314,7 +314,7 @@ octobots/              ← framework (git pull for updates, read-only)
 └── relay.db             taskbox database
 ```
 
-`git pull` in `octobots/` is always safe. Project customizations in `.octobots/` are never touched. Override any base role by copying it to `.octobots/roles/` and editing.
+Re-running `install.sh` (or `git pull` in `octobots/`) is always safe — the framework is the only thing in there. Project customizations live in `.octobots/` and `.claude/`, which are never touched. Override any installed agent by copying it to `.octobots/roles/<role>/` and editing there.
 
 ---
 

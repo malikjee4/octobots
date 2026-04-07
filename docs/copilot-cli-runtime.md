@@ -97,7 +97,7 @@ instead of `claude --agent ba --dangerously-skip-permissions`. Roles without a
 ```bash
 # Translate one role and inspect the output
 python3 octobots/scripts/sync-copilot-agents.py \
-    octobots/roles/personal-assistant \
+    .claude/agents/personal-assistant \
     --copilot-home /tmp/copilot-test
 
 cat /tmp/copilot-test/agents/personal-assistant.agent.md

@@ -238,7 +238,7 @@ octobots/              ← framework (git pull for updates, read-only)
 └── profile.md           scout output
 ```
 
-**Resolution order:** `.octobots/roles/<role>/` overrides `octobots/roles/<role>/`. Same for skills and agents. `git pull` in `octobots/` is always safe.
+**Resolution order:** `.octobots/roles/<role>/` (project overrides) takes priority over `.claude/agents/<role>/` (installed via `npx github:<repo> init`). `octobots/` is framework code only — re-running `install.sh` wipes and re-extracts it, so never put user data there.
 
 ## Configuration
 
@@ -268,29 +268,25 @@ Configured in project root's `.mcp.json`. All roles share it. Contains API token
 
 ## Customization
 
-### Override a base role
+### Override an installed agent
 
 ```bash
-# Copy base role and modify
-cp -r octobots/roles/python-dev/ .octobots/roles/python-dev/
-# Edit .octobots/roles/python-dev/AGENT.md with project-specific instructions
-# .octobots/ version takes priority over octobots/ version
+# Copy the installed agent into .octobots/roles/ and edit there.
+# .octobots/roles/ takes priority over .claude/agents/ of the same name.
+cp -r .claude/agents/python-dev/ .octobots/roles/python-dev/
+# Edit .octobots/roles/python-dev/AGENT.md with project-specific instructions.
 ```
 
 ### Add a custom role
 
-```bash
-mkdir -p .octobots/roles/devops
-# Create AGENT.md (identity frontmatter + instructions) + SOUL.md (personality)
-# Auto-discovered by supervisor on next restart
-```
+Two paths:
+
+- **Project-local:** create `.octobots/roles/my-role/AGENT.md` (+ `SOUL.md`). Auto-discovered on next supervisor restart.
+- **Published agent:** create a GitHub repo following any existing `*-agent` repo's layout, then `npx github:<your>/<name>-agent init --all` to install into `.claude/agents/`.
 
 ### Add a project-specific skill
 
-```bash
-mkdir -p .octobots/skills/deploy-staging
-# Create SKILL.md following docs/skill-spec.md
-```
+Published skills are installed via `npx skills add <repo>` into `.claude/skills/<name>/`. For a project-local skill, drop it directly into `.claude/skills/my-skill/SKILL.md` — the supervisor picks it up on the next worker seed. See [docs/skill-spec.md](skill-spec.md).
 
 ## GitHub Integration
 

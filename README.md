@@ -216,14 +216,16 @@ Roles and skills can be added, removed, and cloned at runtime — no supervisor 
 
 ```bash
 # In the supervisor prompt:
-/role list                      # see available roles and which are active
-/role add my-role               # start a role (from octobots/roles/ or .claude/agents/)
-/role remove my-role            # stop + clear workspace
-/role clone python-dev          # spawn python-dev-2 with own isolated workspace
-/role clone python-dev py-auth  # explicit alias
+/role list                                  # see available roles and which are active
+/role add python-dev                        # install from agents.json (repo + pinned ref)
+/role add arozumenko/my-agent@main          # install directly from a GitHub repo
+/role add my-existing-role                  # use an agent already in .claude/agents/
+/role remove my-role                        # stop + clear .octobots/workers/<role>/
+/role clone python-dev                      # spawn python-dev-2 with own isolated workspace
+/role clone python-dev py-auth              # explicit alias
 ```
 
-If you create an agent in Claude Code (`.claude/agents/my-role/`), `/role add my-role` promotes it to `octobots/roles/my-role/` automatically and replaces it with a symlink.
+`/role add` never moves files. It installs agents into `.claude/agents/` (via `npx github:<repo> init`) and launches them in place. `/role remove` leaves `.claude/agents/<role>/` alone — uninstall the agent separately if you want it gone.
 
 ### Adding skills to a role
 
@@ -234,7 +236,23 @@ If you create an agent in Claude Code (`.claude/agents/my-role/`), `/role add my
 
 ### Defining a new role from scratch
 
-Create `octobots/roles/my-role/AGENT.md` with frontmatter:
+Two options:
+
+**Option A — publish as an agent repo** (survivable across updates, shareable):
+
+```bash
+# Use any existing agent repo as a template (e.g. arozumenko/pm-agent)
+# Edit agents/<name>/AGENT.md + SOUL.md, then install with npx:
+npx github:<your-user>/<name>-agent init --all
+/role add <name>
+```
+
+**Option B — project-local role** (lives in `.octobots/roles/`, not shared):
+
+```bash
+mkdir -p .octobots/roles/my-role
+# Create .octobots/roles/my-role/AGENT.md with frontmatter:
+```
 
 ```yaml
 ---
@@ -242,8 +260,8 @@ name: my-role
 description: One-line description of this role
 model: sonnet
 color: cyan
-skills: [taskbox, bugfix-workflow]   # only skills this role needs
-# workspace: clone                   # uncomment if this role writes code
+skills: [tdd, code-review]   # only skills this role needs
+# workspace: clone           # uncomment if this role writes code
 ---
 ```
 
