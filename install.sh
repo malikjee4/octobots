@@ -86,6 +86,21 @@ echo "Copying to ./$DEST/..."
 rm -rf "./$DEST"
 cp -r "$SRC" "./$DEST"
 
+# Write SHA-256 manifest so update.sh can detect drift on next run.
+# Format is shasum -c compatible; lines starting with `#` are metadata.
+{
+    printf '# octobots install manifest — do not edit\n'
+    printf '# source: https://github.com/%s\n' "$REPO"
+    printf '# ref: %s\n' "$BRANCH"
+    printf '# installed-at: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+} > "./$DEST/.octobots-manifest"
+(cd "./$DEST" && find . -type f \
+    ! -name '.octobots-manifest' \
+    ! -path './.git/*' \
+    -print0 \
+    | LC_ALL=C sort -z \
+    | xargs -0 shasum -a 256) >> "./$DEST/.octobots-manifest"
+
 # ── Python dependencies ───────────────────────────────────────────────────────
 
 echo ""
