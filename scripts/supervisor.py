@@ -1544,6 +1544,12 @@ class Supervisor:
         import re as _re
 
         for role in self.workers:
+            # Ollama-backed roles are managed by _recycle_ollama_workers().
+            # Sending /compact to them is exactly the path we disabled at
+            # launch — it hangs the local model.
+            if self._ollama_role_model(role):
+                continue
+
             pane = self.tmux.panes.get(role, "")
             if not pane:
                 continue
