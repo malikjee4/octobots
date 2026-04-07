@@ -190,7 +190,11 @@ case "$RUNTIME" in
             # Local model via `ollama launch claude` — Ollama sets the
             # ANTHROPIC_* env vars and exec's real Claude Code under the hood.
             command -v ollama &>/dev/null || { echo "Error: ollama binary not found (role '$ROLE' is in OCTOBOTS_OLLAMA_ROLES with model $OLLAMA_MODEL)." >&2; exit 1; }
-            CMD+=(ollama launch claude --model "$OLLAMA_MODEL" --yes --
+            # Local models choke on Claude Code auto-compact (malformed
+            # tool-use → hung session). Disable it; supervisor recycles
+            # the pane on a schedule instead.
+            CMD+=("DISABLE_AUTO_COMPACT=1" "CLAUDE_CODE_DISABLE_AUTO_COMPACT=1"
+                  ollama launch claude --model "$OLLAMA_MODEL" --yes --
                   --agent "$ROLE" --dangerously-skip-permissions)
             BANNER="Claude Code via Ollama ($OLLAMA_MODEL)"
         else

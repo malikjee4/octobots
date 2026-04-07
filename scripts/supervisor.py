@@ -497,6 +497,13 @@ class Supervisor:
         self.launched: set[str] = set()
         self._role_source: dict[str, str] = {}  # worker_id → source role (for clones)
         self._running = True
+        # Per-role recycle state for Ollama-backed workers (auto-compact is
+        # disabled for them, so the supervisor periodically asks the role to
+        # checkpoint important state to memory and then issues /clear).
+        # role → next-recycle-epoch
+        self._ollama_recycle_next: dict[str, float] = {}
+        # role → epoch when checkpoint prompt was sent (None = not pending)
+        self._ollama_recycle_pending: dict[str, float] = {}
 
         # Scheduler
         self.job_store = JobStore(RUNTIME_DIR / "schedule.json")
@@ -750,8 +757,13 @@ class Supervisor:
                 if not shutil.which("ollama"):
                     console.print(f"[red]✗ {role}: ollama binary not found (role is in OCTOBOTS_OLLAMA_ROLES with model {ollama_model})[/red]")
                     return
+                # Local models choke on Claude Code's auto-compact path
+                # (gemma-via-ollama returns malformed tool-use and the session
+                # hangs). Disable it; we instead recycle the pane periodically
+                # via _recycle_ollama_workers().
                 agent_cmd = (
                     f"{gh_env}OCTOBOTS_ID={role} OCTOBOTS_DB={db_path} "
+                    f"DISABLE_AUTO_COMPACT=1 CLAUDE_CODE_DISABLE_AUTO_COMPACT=1 "
                     f"ollama launch claude --model {ollama_model} --yes -- "
                     f"--agent '{source_role}' --dangerously-skip-permissions"
                 )
@@ -1261,6 +1273,9 @@ class Supervisor:
         # Monitor worker health (context pressure, API errors)
         self._check_worker_health()
 
+        # Recycle Ollama-backed panes (auto-compact is disabled for them)
+        self._recycle_ollama_workers()
+
         # Poll taskbox — deliver pending messages, but only if worker is free
         for role in self.workers:
             counts = self.taskbox.counts_for(role)
@@ -1305,6 +1320,82 @@ class Supervisor:
             self.tmux.send_keys(pane, prompt, confirm_paste=True)
             self.taskbox.mark_response_delivered(msg_id)
             console.print(f"[blue]←[/blue] {sender}: response from {recipient} ({msg_id[:8]})")
+
+    def _ollama_role_model(self, role: str) -> str:
+        """Return the Ollama model for a role, or '' if it's not Ollama-backed."""
+        ollama_roles = os.environ.get("OCTOBOTS_OLLAMA_ROLES", "").split()
+        if role not in ollama_roles:
+            return ""
+        role_var = "OCTOBOTS_OLLAMA_MODEL_" + role.upper().replace("-", "_")
+        return os.environ.get(role_var) or os.environ.get("OCTOBOTS_OLLAMA_MODEL", "")
+
+    def _recycle_ollama_workers(self) -> None:
+        """Periodically checkpoint+/clear Ollama-backed panes.
+
+        Local models choke on Claude Code's auto-compact path; we disable it
+        at launch and recycle the session here instead. Two-stage flow:
+
+        1. Send a checkpoint prompt asking the role to flush important state
+           to its memory file.
+        2. After a short grace period (default 60s), send `/clear`. The role
+           re-reads its persona files and memory on the next message, so the
+           important context survives the session reset.
+
+        Tunables (via .env.octobots):
+          OCTOBOTS_OLLAMA_RECYCLE_HOURS  — interval between recycles (default 4)
+          OCTOBOTS_OLLAMA_RECYCLE_GRACE  — seconds between checkpoint and /clear
+                                           (default 60)
+        """
+        try:
+            interval_h = float(os.environ.get("OCTOBOTS_OLLAMA_RECYCLE_HOURS", "4"))
+        except ValueError:
+            interval_h = 4.0
+        try:
+            grace_s = float(os.environ.get("OCTOBOTS_OLLAMA_RECYCLE_GRACE", "60"))
+        except ValueError:
+            grace_s = 60.0
+        interval_s = max(interval_h * 3600.0, 300.0)  # floor at 5 min
+
+        now = time.time()
+        for role in self.workers:
+            if not self._ollama_role_model(role):
+                continue
+            if role not in self.launched:
+                continue
+            pane = self.tmux.panes.get(role, "")
+            if not pane:
+                continue
+
+            # Initialize the next-recycle deadline on first sight.
+            if role not in self._ollama_recycle_next:
+                self._ollama_recycle_next[role] = now + interval_s
+                continue
+
+            pending_at = self._ollama_recycle_pending.get(role)
+
+            if pending_at is None:
+                # Stage 1: time to checkpoint?
+                if now < self._ollama_recycle_next[role]:
+                    continue
+                checkpoint_prompt = (
+                    "[supervisor] Context recycle in ~60s. Flush any in-progress "
+                    "state, open loops, and important context to your MEMORY.md "
+                    "now (use the Write tool). Do NOT reply via notify-user.sh — "
+                    "this is internal housekeeping. After this, your session will "
+                    "be cleared and you'll re-read your persona files on the next "
+                    "message."
+                )
+                self.tmux.send_keys(pane, checkpoint_prompt, confirm_paste=True)
+                self._ollama_recycle_pending[role] = now
+                console.print(f"[yellow]↻[/yellow] {role}: checkpoint sent (recycle in {int(grace_s)}s)")
+            else:
+                # Stage 2: grace period elapsed → /clear
+                if now - pending_at < grace_s:
+                    continue
+                self.tmux.send_keys(pane, "/clear", confirm_paste=True)
+                self._ollama_recycle_pending.pop(role, None)
+                self._ollama_recycle_next[role] = now + interval_s
+                console.print(f"[green]✓[/green] {role}: session cleared (next recycle in {interval_h}h)")
 
     def _check_worker_health(self) -> None:
         """Monitor worker panes for context pressure and auto-recover.
