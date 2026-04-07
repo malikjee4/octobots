@@ -632,12 +632,29 @@ class Supervisor:
             return
 
         worker_dir = RUNTIME_DIR / "workers" / role
-        # Roles with .workspace-root always launch from project root — they read
-        # the whole codebase (e.g. qa-engineer) and must not be confined to a
-        # subdirectory even when a workers/ folder exists for them.
-        uses_project_root = role_dir and (role_dir / ".workspace-root").is_file()
-        launch_dir = PROJECT_DIR if uses_project_root else (worker_dir if worker_dir.is_dir() else PROJECT_DIR)
-        env_label = "root" if uses_project_root else ("isolated" if worker_dir.is_dir() else "shared")
+        # Determine launch directory by AGENT.md frontmatter `workspace:` field:
+        #   clone   → isolated worker_dir (own repo clone)
+        #   shared  → project root (default)
+        #   <unset> → project root
+        # Legacy `.workspace-root` marker file is still honored as an override
+        # for roles that haven't migrated to the frontmatter convention.
+        workspace_kind = "shared"
+        if role_dir:
+            try:
+                fm_text = (role_dir / "AGENT.md").read_text(encoding="utf-8", errors="replace")
+                import re as _re_ws
+                m = _re_ws.search(r'^workspace:\s*(\w+)', fm_text, _re_ws.MULTILINE)
+                if m:
+                    workspace_kind = m.group(1).strip().lower()
+            except OSError:
+                pass
+        forces_root = role_dir and (role_dir / ".workspace-root").is_file()
+        if forces_root or workspace_kind != "clone":
+            launch_dir = PROJECT_DIR
+            env_label = "root" if forces_root else "shared"
+        else:
+            launch_dir = worker_dir if worker_dir.is_dir() else PROJECT_DIR
+            env_label = "isolated" if worker_dir.is_dir() else "shared"
         label = f"{role} [{source_role}]" if source_role != role else role
         console.print(f"[cyan]◆[/cyan] {label} → {launch_dir} [{env_label}]")
 

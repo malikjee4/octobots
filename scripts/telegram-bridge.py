@@ -15,8 +15,9 @@ Usage:
 Environment (.env.octobots):
   OCTOBOTS_TG_TOKEN  — Telegram bot token (required)
   OCTOBOTS_TG_OWNER  — Telegram user ID for auth (required)
-  OCTOBOTS_TMUX      — tmux session name (default: octobots)
-  OCTOBOTS_PM_PANE   — PM's tmux pane name (default: project-manager)
+  OCTOBOTS_TMUX          — tmux session name (default: octobots)
+  OCTOBOTS_DEFAULT_ROLE  — role to route to when no @prefix/reply (default: project-manager)
+                           Falls back to legacy OCTOBOTS_PM_PANE for back-compat.
 """
 from __future__ import annotations
 
@@ -46,7 +47,11 @@ load_dotenv(Path.cwd() / ".env.octobots")
 TG_TOKEN = os.environ.get("OCTOBOTS_TG_TOKEN", "")
 TG_OWNER = os.environ.get("OCTOBOTS_TG_OWNER", "")
 TMUX_SESSION = os.environ.get("OCTOBOTS_TMUX", "octobots")
-PM_PANE = os.environ.get("OCTOBOTS_PM_PANE", "project-manager")
+DEFAULT_ROLE = (
+    os.environ.get("OCTOBOTS_DEFAULT_ROLE")
+    or os.environ.get("OCTOBOTS_PM_PANE")  # legacy alias
+    or "project-manager"
+)
 
 SCRIPT_DIR = Path(__file__).parent
 OCTOBOTS_DIR = SCRIPT_DIR.parent
@@ -278,6 +283,10 @@ async def run_bot() -> None:
     )
     from roles import ROLE_ALIASES as ALIASES, ROLE_DISPLAY as DISPLAY_NAMES, resolve_alias
 
+    def label_for(role: str) -> str:
+        """Display label for a role; falls back to '🤖 <role>' for unknown roles."""
+        return DISPLAY_NAMES.get(role, f"🤖 {role}")
+
     def _auth(update: Update) -> bool:
         return str(update.effective_user.id) == TG_OWNER
 
@@ -291,7 +300,7 @@ async def run_bot() -> None:
             context.bot,
             update.effective_chat.id,
             "<b>Octobots</b> connected.\n\n"
-            "Messages go to <b>Max</b> (PM) by default.\n"
+            f"Messages go to <b>{label_for(DEFAULT_ROLE)}</b> by default.\n"
             "Use <code>@role message</code> to reach a specific team member.\n\n"
             "<b>Commands:</b>\n"
             "• /status — worker states\n"
@@ -357,18 +366,24 @@ async def run_bot() -> None:
     async def cmd_team(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not _auth(update):
             return
-        roles = [
-            ("📋", "pm",    "Coordination, status"),
-            ("📝", "ba",    "Goals → user stories"),
-            ("🏗️", "tl",    "Stories → tasks"),
-            ("🐍", "py",    "Python / backend"),
-            ("⚡", "js",    "JS/TS / frontend"),
-            ("🧪", "qa",    "Testing & verification"),
-            ("🔍", "scout", "Codebase exploration"),
-        ]
+        # Build the roster from actually-running panes so PA-only / custom
+        # team compositions don't show ghost teammates.
+        pane_map = _load_pane_map()
+        # Reverse ROLE_ALIASES to find a short alias for each running role.
+        short_alias: dict[str, str] = {}
+        for alias, full in ALIASES.items():
+            if full in pane_map and full != alias and len(alias) <= len(short_alias.get(full, "x" * 99)):
+                short_alias[full] = alias
+
         lines = ["<b>Team</b>\n"]
-        for icon, name, desc in roles:
-            lines.append(f"{icon} <code>@{name}</code> — {desc}")
+        if not pane_map:
+            lines.append("<i>No workers running.</i>")
+        else:
+            for role in sorted(pane_map.keys()):
+                display = label_for(role)
+                alias = short_alias.get(role, role)
+                marker = "  ← default" if role == DEFAULT_ROLE else ""
+                lines.append(f"{display} <code>@{alias}</code>{marker}")
         await send_telegram(context.bot, update.effective_chat.id, "\n".join(lines))
 
     # ── /logs <role> — last output from a worker ───────────────────────
@@ -703,9 +718,9 @@ async def run_bot() -> None:
         if not text.strip():
             return
 
-        # Route by: 1) reply to a role's message, 2) @role prefix, 3) default to PM
-        target_pane = PM_PANE
-        target_label = "📋 Max"
+        # Route by: 1) reply to a role's message, 2) @role prefix, 3) default role
+        target_pane = DEFAULT_ROLE
+        target_label = label_for(DEFAULT_ROLE)
 
         # Check if replying to a message from a specific role: [role-name] ...
         # Role badge can be in .text (regular message) or .caption (photo/document)
@@ -785,8 +800,8 @@ async def run_bot() -> None:
         caption = msg.caption or ""
 
         # Determine target role from caption (@role prefix) or reply context
-        target_pane = PM_PANE
-        target_label = "📋 Max"
+        target_pane = DEFAULT_ROLE
+        target_label = label_for(DEFAULT_ROLE)
 
         # Check reply context (role badge can be in .text or .caption)
         reply = msg.reply_to_message
@@ -915,7 +930,7 @@ async def run_bot() -> None:
         BotCommand("help", "Command reference"),
     ])
 
-    logger.info("Telegram bridge started — tmux %s:%s", TMUX_SESSION, PM_PANE)
+    logger.info("Telegram bridge started — tmux %s, default role %s", TMUX_SESSION, DEFAULT_ROLE)
     await app.initialize()
     await app.start()
     await app.updater.start_polling(drop_pending_updates=True)
