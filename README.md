@@ -241,9 +241,9 @@ Two options:
 **Option A — publish as an agent repo** (survivable across updates, shareable):
 
 ```bash
-# Use any existing agent repo as a template (e.g. arozumenko/pm-agent)
-# Edit agents/<name>/AGENT.md + SOUL.md, then install with npx:
-npx github:<your-user>/<name>-agent init --all
+# Add agents/<name>/{AGENT.md,SOUL.md} to arozumenko/sdlc-skills (or your fork),
+# register it in agents.json, then install:
+npx github:arozumenko/sdlc-skills init --agents <name> --target claude
 /role add <name>
 ```
 

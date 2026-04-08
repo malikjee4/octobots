@@ -202,7 +202,7 @@ _fetch_component() {
     local section="$1" repo="$2" ref="$3"
     local type; type=$([[ "$section" == "roles" ]] && echo "agent" || echo "skill")
     local name="${repo##*/}"
-    name="${name%-agent}"; name="${name#skill-}"
+    name="${name%-agent}"; name="${name#skill-}"; name="${name#sdlc:}"
 
     # Check already installed (skip unless --update)
     if [[ $UPDATE -eq 0 ]]; then

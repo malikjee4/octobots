@@ -3,7 +3,7 @@
 #
 # Resolution order:
 #   1. .octobots/roles/<role>/   (project overrides)
-#   2. .claude/agents/<role>/    (installed via npx github:arozumenko/<role>-agent init)
+#   2. .claude/agents/<role>/    (installed via npx github:arozumenko/sdlc-skills init --agents <role>)
 #
 # Usage:
 #   octobots/start.sh <role>           # e.g. python-dev, js-dev
@@ -71,7 +71,7 @@ esac
 # ── Resolve role directory ────────────────────────────────────────────────
 # Resolution order:
 #   1. .octobots/roles/<role>/      project overrides
-#   2. .claude/agents/<role>/       installed via npx github:arozumenko/<role>-agent init
+#   2. .claude/agents/<role>/       installed via npx github:arozumenko/sdlc-skills init --agents <role>
 resolve_role() {
     local role="$1"
     if [[ -f "$LOCAL_ROLES/$role/AGENT.md" ]]; then

@@ -118,7 +118,7 @@ def cmd_verify(project: Path) -> int:
     print("", file=sys.stderr)
 
     if missing_total:
-        print(f"  {missing_total} missing skill(s). Install with: npx skills add arozumenko/skill-<name>", file=sys.stderr)
+        print(f"  {missing_total} missing skill(s). Install with: npx github:arozumenko/sdlc-skills init --skills <name> --target claude", file=sys.stderr)
         return 1
     print("  All declared skills resolved.", file=sys.stderr)
     return 0

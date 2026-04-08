@@ -126,19 +126,36 @@ arozumenko/pm-agent
 arozumenko/python-dev-agent"
     }
 
+    # Two install paths:
+    #   sdlc:<name>      → batched into a single sdlc-skills installer call
+    #   owner/repo@ref   → installed individually (third-party agent repos)
+    SDLC_AGENT_NAMES=""
     while IFS= read -r agent_entry; do
         [[ -z "$agent_entry" ]] && continue
-        # Entry is "owner/repo@ref" (ref defaults to "main" in select-agents.py)
-        agent_repo="${agent_entry%@*}"
-        agent_ref="${agent_entry##*@}"
-        [[ "$agent_ref" == "$agent_entry" ]] && agent_ref="main"
-        repo_name="${agent_repo##*/}"
-        if npx "github:${agent_repo}#${agent_ref}" init --all 2>/dev/null; then
-            echo "  ✓ $repo_name @ $agent_ref"
+        if [[ "$agent_entry" == sdlc:* ]]; then
+            name="${agent_entry#sdlc:}"
+            SDLC_AGENT_NAMES="${SDLC_AGENT_NAMES:+$SDLC_AGENT_NAMES,}$name"
         else
-            echo "  ⚠  $repo_name @ $agent_ref — install failed"
+            agent_repo="${agent_entry%@*}"
+            agent_ref="${agent_entry##*@}"
+            [[ "$agent_ref" == "$agent_entry" ]] && agent_ref="main"
+            repo_name="${agent_repo##*/}"
+            if npx "github:${agent_repo}#${agent_ref}" init --all 2>/dev/null; then
+                echo "  ✓ $repo_name @ $agent_ref"
+            else
+                echo "  ⚠  $repo_name @ $agent_ref — install failed"
+            fi
         fi
     done <<< "$SELECTED_REPOS"
+
+    if [[ -n "$SDLC_AGENT_NAMES" ]]; then
+        if npx -y github:arozumenko/sdlc-skills init \
+            --agents "$SDLC_AGENT_NAMES" --target claude --yes 2>&1 | sed 's/^/    /'; then
+            echo "  ✓ sdlc-skills agents: $SDLC_AGENT_NAMES"
+        else
+            echo "  ⚠  sdlc-skills agent install failed ($SDLC_AGENT_NAMES)"
+        fi
+    fi
 else
     echo "  ⚠  npx not found — skipping agent install (Node.js required)"
     echo "     Install manually: npx github:arozumenko/scout-agent init  (etc.)"
@@ -158,33 +175,26 @@ if command -v npx &>/dev/null; then
     if [[ -z "$REQUIRED_SKILLS" ]]; then
         echo "  — no skills declared by selected agents"
     else
+        # Filter out skills already present (bundled or pre-installed) and
+        # batch the rest into a single sdlc-skills installer call.
+        TO_INSTALL=""
         while IFS= read -r skill_id; do
             [[ -z "$skill_id" ]] && continue
-            # Already installed (e.g. by an agent installer that ships its own skills)?
             if [[ -d ".claude/skills/$skill_id" ]]; then
                 echo "  ✓ $skill_id (already present)"
                 continue
             fi
-            # Look up repo + pinned ref in skills.json registry
-            skill_entry=$(python3 -c "
-import json
-data = json.load(open('$DEST/skills.json'))
-for s in data.get('skills', []):
-    if s['id'] == '$skill_id':
-        print(s['repo'] + '@' + s.get('ref', 'main')); break
-" 2>/dev/null)
-            if [[ -z "$skill_entry" ]]; then
-                echo "  ⚠  $skill_id — not in skills.json registry, skipping"
-                continue
-            fi
-            skill_repo="${skill_entry%@*}"
-            skill_ref="${skill_entry##*@}"
-            if npx skills add "${skill_repo}#${skill_ref}" --yes 2>/dev/null; then
-                echo "  ✓ $skill_id @ $skill_ref"
-            else
-                echo "  ⚠  $skill_id @ $skill_ref — install failed (repo: $skill_repo)"
-            fi
+            TO_INSTALL="${TO_INSTALL:+$TO_INSTALL,}$skill_id"
         done <<< "$REQUIRED_SKILLS"
+
+        if [[ -n "$TO_INSTALL" ]]; then
+            if npx -y github:arozumenko/sdlc-skills init \
+                --skills "$TO_INSTALL" --target claude --yes 2>&1 | sed 's/^/    /'; then
+                echo "  ✓ sdlc-skills: $TO_INSTALL"
+            else
+                echo "  ⚠  sdlc-skills skill install failed ($TO_INSTALL)"
+            fi
+        fi
     fi
 else
     echo "  ⚠  npx not found — skipping skill install (Node.js required)"

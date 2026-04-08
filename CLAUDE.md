@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Octobots is a framework for orchestrating multiple Claude Code instances as an AI development team. It's installed into target projects as a sibling directory (`octobots/`), not run standalone. Roles (PM, dev, QA, BA, tech lead, scout) are published as standalone agent repos and installed via `npx github:arozumenko/<name>-agent init`. They communicate through a shared SQLite queue (taskbox).
+Octobots is a framework for orchestrating multiple Claude Code instances as an AI development team. It's installed into target projects as a sibling directory (`octobots/`), not run standalone. Roles (PM, dev, QA, BA, tech lead, scout) and most published skills now live in the single `arozumenko/sdlc-skills` monorepo and are installed via `npx github:arozumenko/sdlc-skills init --agents <name> --skills <name> --target claude`. Roles communicate through a shared SQLite queue (taskbox).
 
 ## Commands
 
@@ -43,13 +43,12 @@ There is no test suite for the framework itself — tests live in target project
 
 ### Role System (Decoupled)
 
-Roles are standalone GitHub repos (`arozumenko/<name>-agent`). Each has:
-- `agents/<name>/AGENT.md` — YAML frontmatter (name, model, color, `workspace`, skills list) + technical instructions
-- `agents/<name>/SOUL.md` — Personality, voice, working style
-- `bin/init.mjs` — Installer: copies agent files to `.claude/agents/`, `.cursor/agents/`, etc.
-- `package.json` with `"bin": { "init": "./bin/init.mjs" }`
+Roles live in `arozumenko/sdlc-skills/agents/<name>/` (a few third-party agents like `onetest-ai/qa-agent` remain on their own). Each agent dir has:
+- `AGENT.md` — YAML frontmatter (name, model, color, `workspace`, skills list) + technical instructions
+- `SOUL.md` — Personality, voice, working style
 
-Install a role: `npx github:arozumenko/<name>-agent init --all`
+Install a role: `npx github:arozumenko/sdlc-skills init --agents <name> --target claude`
+Install several at once: `npx github:arozumenko/sdlc-skills init --agents ba,tech-lead,pm --target claude`
 
 Role resolution order (both `start.sh` and `supervisor.py`):
 1. `.octobots/roles/<role>/` (project overrides)
@@ -73,7 +72,8 @@ Roles with `workspace: clone` get isolated repo clones under `.octobots/workers/
 
 ```json
 {
-  "agents": [{ "id": "scout", "repo": "arozumenko/scout-agent", "required": true }, ...],
+  "monorepo": { "id": "sdlc-skills", "repo": "arozumenko/sdlc-skills", "ref": "main" },
+  "agents": [{ "id": "scout", "monorepo": "sdlc-skills", "name": "scout", "required": true }, ...],
   "presets": [{ "name": "Full-stack web team", "agents": [...], "qa": "qa-onetest" }, ...]
 }
 ```
@@ -119,7 +119,7 @@ Rich TUI that manages tmux panes, polls taskbox, runs scheduled jobs, and mainta
 
 ### Skills System
 
-Bundled skills in `skills/<name>/` are reusable capabilities symlinked into each role's `.claude/skills/`. Published skills (code-review, git-workflow, tdd, etc.) live in standalone `arozumenko/skill-*` repos and are installed via `npx skills add arozumenko/<skill-name>`. The `SKILL.md` file defines the skill per the agentskills.io spec.
+Bundled skills in `skills/<name>/` are reusable capabilities symlinked into each role's `.claude/skills/`. Published skills (code-review, git-workflow, tdd, memory, etc.) live in `arozumenko/sdlc-skills/skills/<name>/` and are installed via `npx github:arozumenko/sdlc-skills init --skills <name> --target claude`. The `SKILL.md` file defines the skill per the agentskills.io spec.
 
 Bundled skills (still in this repo):
 - `taskbox` — inter-role messaging relay
@@ -181,17 +181,13 @@ OCTOBOTS_EXCLUDED_ROLES=scout
 
 ## Adding a New Role
 
-1. Create a new GitHub repo `arozumenko/<name>-agent`
-2. Add `agents/<name>/AGENT.md` with YAML frontmatter and instructions
-3. Add `agents/<name>/SOUL.md` with personality
-4. Add `bin/init.mjs` (copy from any existing agent repo and update `AGENT_NAME`)
-5. Add `package.json` with `"bin": { "init": "./bin/init.mjs" }`
-6. Register in `agents.json` under `"agents"`
-7. Use `workspace: clone` in AGENT.md frontmatter if the role needs an isolated repo clone
+1. Add `agents/<name>/AGENT.md` (with YAML frontmatter) and `agents/<name>/SOUL.md` to `arozumenko/sdlc-skills`
+2. Register in `agents.json` under `"agents"` with `monorepo: sdlc-skills` and `name: <name>`
+3. Use `workspace: clone` in AGENT.md frontmatter if the role needs an isolated repo clone
 
 ## Adding a New Skill
 
 Follow the agentskills.io spec documented in `docs/skill-spec.md`. The `SKILL.md` file is the definition. Scripts go in `skills/<name>/scripts/`. The skill is activated by symlinking into a role's `.claude/skills/`.
 
-For standalone skills: create `arozumenko/skill-<name>` repo and publish via `npx skills add`.
-For bundled skills (framework-internal): add to `skills/<name>/` in this repo.
+For published skills: add to `arozumenko/sdlc-skills/skills/<name>/` and register in `skills.json` with `monorepo: sdlc-skills`.
+For bundled skills (framework-internal, e.g. taskbox): add to `skills/<name>/` in this repo.

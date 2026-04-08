@@ -157,7 +157,7 @@ ln -s /path/to/octobots/skills/my-skill .claude/skills/my-skill
 Install from registry:
 
 ```bash
-npx skills add arozumenko/skill-msgraph
+npx github:arozumenko/sdlc-skills init --skills msgraph --target claude
 ```
 
 ## Validation Checklist

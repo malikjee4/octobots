@@ -1116,10 +1116,15 @@ class Supervisor:
                     console.print(f"[red]Role '{arg}' not found in .octobots/roles/, .claude/agents/, or agents.json[/red]")
                     console.print("[dim]Use `/role add owner/repo[@ref]` to install from a GitHub repo.[/dim]")
                     return
-                repo = entry["repo"]
-                ref = entry.get("ref", "main")
-                console.print(f"[dim]Installing {arg} from {repo}@{ref}...[/dim]")
-                role = self._fetch_component("agent", repo, ref)
+                if entry.get("monorepo") == "sdlc-skills":
+                    name = entry.get("name", arg)
+                    console.print(f"[dim]Installing {arg} from arozumenko/sdlc-skills...[/dim]")
+                    role = self._fetch_component("agent", f"sdlc:{name}", "main")
+                else:
+                    repo = entry["repo"]
+                    ref = entry.get("ref", "main")
+                    console.print(f"[dim]Installing {arg} from {repo}@{ref}...[/dim]")
+                    role = self._fetch_component("agent", repo, ref)
                 if not role:
                     return
 

@@ -156,11 +156,17 @@ def main():
     else:
         selected_ids = run_interactive(registry)
 
-    # Resolve ids to repo@ref and print (ref defaults to "main")
+    # Resolve ids to either "sdlc:<name>" (monorepo entries) or "owner/repo@ref"
+    # (third-party entries). install.sh batches the sdlc: ones into a single
+    # `npx github:arozumenko/sdlc-skills init --agents a,b,c` call.
     print()
     for aid in selected_ids:
         agent = agents.get(aid)
-        if agent:
+        if not agent:
+            continue
+        if agent.get("monorepo") == "sdlc-skills":
+            print(f"sdlc:{agent['name']}")
+        else:
             ref = agent.get("ref", "main")
             print(f"{agent['repo']}@{ref}")
 

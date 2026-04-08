@@ -4,11 +4,14 @@
 # Usage:
 #   registry-fetch.sh agent <owner/repo> [ref]   # → .claude/agents/<name>/
 #   registry-fetch.sh skill <owner/repo> [ref]   # → .claude/skills/<name>/
+#   registry-fetch.sh agent sdlc:<name>          # install one agent from sdlc-skills
+#   registry-fetch.sh skill sdlc:<name>          # install one skill from sdlc-skills
 #
 # Fetch strategy (in order):
-#   1. npx "github:<repo>" init --all  (agents)
+#   1. sdlc:<name>  → npx github:arozumenko/sdlc-skills init --agents/--skills <name>
+#   2. npx "github:<repo>" init --all  (agents)
 #      npx skills add <repo> --yes     (skills)
-#   2. git clone --depth 1 → .octobots/registry/<repo-name>/
+#   3. git clone --depth 1 → .octobots/registry/<repo-name>/
 #      then symlink into .claude/agents/ or .claude/skills/
 #
 # Exits 0 on success, 1 on failure.
@@ -24,6 +27,35 @@ PROJECT_DIR="$(pwd)"
 RUNTIME="$PROJECT_DIR/.octobots"
 REGISTRY="$RUNTIME/registry"
 repo_name="${REPO##*/}"   # e.g. "pm-agent" from "arozumenko/pm-agent"
+
+# ── sdlc-skills monorepo shortcut ────────────────────────────────────────────
+# `registry-fetch.sh agent sdlc:scout` →
+#   npx github:arozumenko/sdlc-skills init --agents scout --target claude --yes
+fetch_sdlc() {
+    local kind="$1" name="$2" flag
+    case "$kind" in
+        agent) flag="--agents" ;;
+        skill) flag="--skills" ;;
+        *)     return 1 ;;
+    esac
+    if ! command -v npx &>/dev/null; then
+        echo "  ✗ npx not found — install Node.js" >&2
+        return 1
+    fi
+    mkdir -p "$PROJECT_DIR/.claude/${kind}s"
+    if npx -y github:arozumenko/sdlc-skills init \
+        "$flag" "$name" --target claude --yes >&2 2>&1; then
+        echo "$name"
+        return 0
+    fi
+    echo "  ✗ sdlc-skills install failed for $kind:$name" >&2
+    return 1
+}
+
+if [[ "$REPO" == sdlc:* ]]; then
+    fetch_sdlc "$TYPE" "${REPO#sdlc:}"
+    exit $?
+fi
 
 # ── Agent fetch ───────────────────────────────────────────────────────────────
 

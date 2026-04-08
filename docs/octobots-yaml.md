@@ -8,25 +8,21 @@
 version: "1.0"
 
 roles:
-  - repo: arozumenko/pm-agent
-    ref: main                       # branch, tag, or SHA
-  - repo: arozumenko/python-dev-agent
-    ref: main
-  - repo: arozumenko/qa-engineer-agent
-    ref: v1.2.0                     # pin to a specific release
-  - repo: myorg/custom-agent        # private or unlisted agent
+  - repo: sdlc:project-manager      # → sdlc-skills monorepo, agent "project-manager"
+  - repo: sdlc:python-dev
+  - repo: sdlc:qa-engineer
+  - repo: myorg/custom-agent        # private or unlisted third-party agent
     ref: main
 
 skills:
-  - repo: arozumenko/skill-tdd
-    ref: main
-  - repo: arozumenko/skill-code-review
-    ref: main
-  - repo: arozumenko/skill-msgraph
-    ref: main
-  - repo: myorg/skill-internal      # private skill
+  - repo: sdlc:tdd                  # → sdlc-skills monorepo, skill "tdd"
+  - repo: sdlc:code-review
+  - repo: sdlc:msgraph
+  - repo: myorg/skill-internal      # private skill on its own repo
     ref: feature/new-workflow
 ```
+
+The `sdlc:<name>` shorthand resolves through the `arozumenko/sdlc-skills` monorepo installer in one batched call. Plain `owner/repo[@ref]` entries still install individually for third-party agent / skill repos.
 
 ## Fields
 
@@ -48,19 +44,20 @@ octobots/scripts/init-project.sh
 octobots/scripts/init-project.sh --update
 
 # Add one role ad-hoc (not in octobots.yaml)
-octobots/scripts/init-project.sh --role arozumenko/scout-agent
+octobots/scripts/init-project.sh --role sdlc:scout
 octobots/scripts/init-project.sh --role myorg/custom-agent@v2.0
 
 # Add one skill ad-hoc
-octobots/scripts/init-project.sh --skill arozumenko/skill-msgraph
+octobots/scripts/init-project.sh --skill sdlc:msgraph
 ```
 
 ## Fetch strategy
 
 For each declared role or skill, `registry-fetch.sh` tries in order:
 
-1. **`npx github:<repo> init --all`** (roles) or **`npx skills add <repo>`** (skills) — uses the agentskills.io/npx ecosystem, installs into `.claude/agents/` or `.claude/skills/`
-2. **`git clone --depth 1 --branch <ref>`** fallback — clones into `.octobots/registry/<repo-name>/`, then symlinks into `.claude/agents/<name>/` or `.claude/skills/<name>/`
+1. **`sdlc:<name>`** → `npx github:arozumenko/sdlc-skills init --agents/--skills <name> --target claude --yes`
+2. **`npx github:<repo> init --all`** (roles) or **`npx skills add <repo>`** (skills) — uses the agentskills.io/npx ecosystem, installs into `.claude/agents/` or `.claude/skills/`
+3. **`git clone --depth 1 --branch <ref>`** fallback — clones into `.octobots/registry/<repo-name>/`, then symlinks into `.claude/agents/<name>/` or `.claude/skills/<name>/`
 
 The git clone fallback works for private repos and repos not published to npm.
 
@@ -77,9 +74,10 @@ These octobots-internal skills are **not** declared in `octobots.yaml` — they 
 ## Runtime: supervisor REPL
 
 ```
-/role add arozumenko/scout-agent         # fetch + start
-/role add arozumenko/scout-agent@v2.0    # fetch specific version + start
-/skill add arozumenko/skill-msgraph      # fetch + link into all active workers
+/role add scout                          # look up in agents.json → sdlc-skills
+/role add sdlc:scout                     # explicit sdlc-skills form
+/role add myorg/custom-agent@v2.0        # third-party repo (still supported)
+/skill add sdlc:msgraph                  # fetch + link into all active workers
 /skill add myorg/skill-internal@main     # private skill via git clone fallback
 ```
 
