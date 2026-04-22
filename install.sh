@@ -161,83 +161,49 @@ else
     echo "     Install manually: npx github:arozumenko/scout-agent init  (etc.)"
 fi
 
-# ── Install skills declared by selected agents ───────────────────────────────
-# Source of truth: the union of `skills:` frontmatter from every installed agent.
-# Each declared id is looked up in skills.json:
-#   monorepo: sdlc-skills  → batched into one sdlc-skills installer call
-#   repo: owner/repo       → fetched individually via registry-fetch.sh
-#   not listed             → warned and skipped
+# ── Backfill any skills that weren't pulled in by an agent install ──────────
+# sdlc-skills' init.mjs auto-resolves every skill declared by the agents it
+# installs (monorepo + external via its own skills.json). This backfill loop
+# only exists to cover gaps — e.g. third-party agents installed via their own
+# repo installers whose declared skills live in sdlc-skills' registry and
+# therefore didn't come along automatically.
+#
+# Source of truth: the union of `skills:` frontmatter from every installed
+# agent. We subtract what's already present in .claude/skills/ and ask the
+# sdlc-skills installer to fill the rest. Unknown skill ids (not in
+# sdlc-skills' registry) are surfaced by the installer itself.
 
 echo ""
-echo "Installing skills required by your team..."
+echo "Verifying skills declared by installed agents..."
 if command -v npx &>/dev/null; then
     REQUIRED_SKILLS=$(python3 "$DEST/scripts/resolve-skills.py" union)
 
     if [[ -z "$REQUIRED_SKILLS" ]]; then
-        echo "  — no skills declared by selected agents"
+        echo "  — no skills declared by installed agents"
     else
-        SDLC_SKILL_NAMES=""
+        MISSING=""
         while IFS= read -r skill_id; do
             [[ -z "$skill_id" ]] && continue
-            if [[ -d ".claude/skills/$skill_id" ]]; then
-                echo "  ✓ $skill_id (already present)"
+            if [[ -d ".claude/skills/$skill_id" || -L ".claude/skills/$skill_id" ]]; then
                 continue
             fi
-            # Resolve skill_id against skills.json →
-            #   "monorepo"
-            #   "<owner/repo>|<ref>|<subdir>"  (subdir may be empty)
-            #   "unknown"
-            resolution=$(python3 - "$DEST/skills.json" "$skill_id" <<'PY'
-import json, sys
-registry, skill_id = sys.argv[1], sys.argv[2]
-try:
-    data = json.load(open(registry))
-except Exception:
-    print("unknown"); sys.exit(0)
-for entry in data.get("skills", []):
-    if entry.get("id") != skill_id:
-        continue
-    if entry.get("monorepo"):
-        print("monorepo"); sys.exit(0)
-    repo = entry.get("repo")
-    if repo:
-        ref = entry.get("ref", "main")
-        subdir = entry.get("subdir", "")
-        print(f"{repo}|{ref}|{subdir}"); sys.exit(0)
-    break
-print("unknown")
-PY
-)
-            case "$resolution" in
-                monorepo)
-                    SDLC_SKILL_NAMES="${SDLC_SKILL_NAMES:+$SDLC_SKILL_NAMES,}$skill_id"
-                    ;;
-                unknown)
-                    echo "  ⚠  $skill_id — not in skills.json, skipping"
-                    ;;
-                *)
-                    IFS='|' read -r repo ref subdir <<< "$resolution"
-                    where="$repo@$ref${subdir:+ (subdir: $subdir)}"
-                    if bash "$DEST/scripts/registry-fetch.sh" skill "$repo" "$ref" "$subdir" >/dev/null; then
-                        echo "  ✓ $skill_id (from $where)"
-                    else
-                        echo "  ⚠  $skill_id — fetch failed from $where"
-                    fi
-                    ;;
-            esac
+            MISSING="${MISSING:+$MISSING,}$skill_id"
         done <<< "$REQUIRED_SKILLS"
 
-        if [[ -n "$SDLC_SKILL_NAMES" ]]; then
+        if [[ -z "$MISSING" ]]; then
+            echo "  ✓ all declared skills present"
+        else
+            echo "  Backfilling: $MISSING"
             if npx -y github:arozumenko/sdlc-skills init \
-                --skills "$SDLC_SKILL_NAMES" --target claude --yes 2>&1 | sed 's/^/    /'; then
-                echo "  ✓ sdlc-skills: $SDLC_SKILL_NAMES"
+                --skills "$MISSING" --target claude --yes 2>&1 | sed 's/^/    /'; then
+                echo "  ✓ backfill complete"
             else
-                echo "  ⚠  sdlc-skills skill install failed ($SDLC_SKILL_NAMES)"
+                echo "  ⚠  some skills may still be missing — check the output above"
             fi
         fi
     fi
 else
-    echo "  ⚠  npx not found — skipping skill install (Node.js required)"
+    echo "  ⚠  npx not found — skipping skill backfill (Node.js required)"
 fi
 
 # ── Process setup.yaml for bundled skills (MCP + other deps) ─────────────────

@@ -34,6 +34,7 @@ from rich import box
 
 from scheduler import JobStore, Scheduler, JobType, JobAction, parse_interval, format_interval
 from roles import ROLE_ALIASES, ROLE_DISPLAY, resolve_alias
+from agent_registry import role_themes
 
 # ── Paths ───────────────────────────────────────────────────────────────────
 
@@ -49,32 +50,11 @@ TMUX_SESSION = "octobots"
 EXCLUDED_ROLES = {"scout"}
 
 
-def _load_role_theme() -> dict[str, dict[str, str]]:
-    """Load per-role tmux pane theming (color/icon/short_name) from agents.json.
-
-    Unknown roles fall back to a generic 🤖 via ROLE_THEME.get(role, default)
-    at the call site — no hardcoded table to keep in sync.
-    """
-    themes: dict[str, dict[str, str]] = {}
-    registry_path = OCTOBOTS_DIR / "agents.json"
-    try:
-        registry = json.loads(registry_path.read_text())
-    except (OSError, ValueError):
-        return themes
-    for agent in registry.get("agents", []):
-        role = agent.get("role")
-        theme = agent.get("theme")
-        if not role or not theme:
-            continue
-        themes[role] = {
-            "color": theme.get("color", "colour250"),
-            "icon": theme.get("icon", "🤖"),
-            "name": theme.get("short_name", role),
-        }
-    return themes
-
-
-ROLE_THEME: dict[str, dict[str, str]] = _load_role_theme()
+# Tmux pane theming is loaded from each installed agent's AGENT.md frontmatter,
+# overlaid with octobots/agent-overrides.json for third-party agents that
+# don't ship the fields. Unknown roles fall back to a generic 🤖 via
+# ROLE_THEME.get(role, default) at the call site.
+ROLE_THEME: dict[str, dict[str, str]] = role_themes()
 
 console = Console()
 

@@ -75,22 +75,25 @@ Roles with `workspace: clone` get isolated repo clones under `.octobots/workers/
   "monorepo": { "id": "sdlc-skills", "repo": "arozumenko/sdlc-skills", "ref": "main" },
   "agents": [{
     "id": "scout", "monorepo": "sdlc-skills", "name": "scout", "required": true,
-    "group": "core",
-    "theme": {"color": "colour252", "icon": "🔍", "short_name": "scout"},
-    "aliases": ["kit"]
+    "group": "core"
   }, ...],
   "presets": [{ "name": "iOS development", "agents": [...], "qa": "qa-sage" }, ...]
 }
 ```
 
-Each agent's optional `group` (`core` | `dev` | `qa`) determines how
-`select-agents.py` groups it in the Custom flow (core = y/n each, devs =
-multi-select, qas = picker). `theme` drives the tmux pane styling in
-supervisor.py (`ROLE_THEME` is loaded from this file at import time).
-`aliases` drives shorthand resolution in `scripts/roles.py`
-(`ROLE_ALIASES`/`ROLE_DISPLAY` are loaded from this file too). Adding a new
-dev or QA is a one-file change — register it here with group/theme/aliases
-and every consumer picks it up.
+`agents.json` is **install-time only** — it tells `select-agents.py` how to
+install each agent (monorepo + name, or third-party repo) and which group
+to show it under in the Custom flow (`core` | `dev` | `qa`). Runtime
+metadata (theme for tmux panes, aliases for @shorthands) lives in each
+agent's AGENT.md frontmatter and is loaded by `scripts/agent_registry.py`
+at supervisor startup. For third-party agents that don't ship those
+fields, `octobots/agent-overrides.json` provides an overlay.
+
+Adding a new agent: register in `agents.json` for the picker, ensure the
+agent's own AGENT.md carries `group`/`theme`/`aliases`/`required` fields
+(for sdlc-skills agents this is just frontmatter), and — if it's a
+third-party agent you can't modify upstream — drop an override entry in
+`agent-overrides.json`.
 
 ### Taskbox (Inter-Role Messaging)
 
@@ -195,19 +198,25 @@ OCTOBOTS_EXCLUDED_ROLES=scout
 
 ## Adding a New Role
 
-1. Add `agents/<name>/AGENT.md` (with YAML frontmatter) and `agents/<name>/SOUL.md` to `arozumenko/sdlc-skills`
-2. Register in `agents.json` under `"agents"` with `monorepo: sdlc-skills` and `name: <name>`. Add:
-   - `role: <name>` — the worker id at runtime (must match the dir the installer drops into)
-   - `group: "core" | "dev" | "qa"` — where it appears in the Custom selector
-   - `theme: {color, icon, short_name}` — tmux pane styling
+1. Add `agents/<name>/AGENT.md` (with YAML frontmatter) and `agents/<name>/SOUL.md` to `arozumenko/sdlc-skills`.
+   The AGENT.md frontmatter carries all runtime metadata:
+   - `group: core | dev | qa` — where it appears in the Custom selector
+   - `theme: {color: colour<N>, icon: "<emoji>", short_name: <short>}` — tmux pane styling
    - `aliases: [short, nickname, ...]` — @shorthand resolution (e.g. `["io", "ios"]` for ios-dev)
-3. Use `workspace: clone` in AGENT.md frontmatter if the role needs an isolated repo clone
-4. No Python changes required — `supervisor.py`, `scripts/roles.py`, and `scripts/select-agents.py`
-   all read the registry at startup.
+   - `required: true` — only for scout-style always-on agents
+   - `workspace: clone` — if the role needs an isolated repo clone
+2. Register in `agents.json` for the install-time picker (id, monorepo+name or repo, role, description, group).
+3. No Python changes required — `supervisor.py`, `scripts/roles.py`, and `scripts/select-agents.py`
+   all read from installed AGENT.md frontmatter (via `scripts/agent_registry.py`) or from `agents.json` directly.
+4. For third-party agents you can't modify upstream, add an overlay entry in `agent-overrides.json` instead.
 
 ## Adding a New Skill
 
 Follow the agentskills.io spec documented in `docs/skill-spec.md`. The `SKILL.md` file is the definition. Scripts go in `skills/<name>/scripts/`. The skill is activated by symlinking into a role's `.claude/skills/`.
 
-For published skills: add to `arozumenko/sdlc-skills/skills/<name>/` and register in `skills.json` with `monorepo: sdlc-skills`.
-For bundled skills (framework-internal, e.g. taskbox): add to `skills/<name>/` in this repo.
+Skill resolution now lives in **sdlc-skills**:
+- Published skills (monorepo): add to `arozumenko/sdlc-skills/skills/<name>/` and register in `arozumenko/sdlc-skills/skills.json` with `monorepo: sdlc-skills`.
+- External skills (third-party repos): register in `arozumenko/sdlc-skills/skills.json` with `repo: owner/repo` (+ optional `ref`, + optional `subdir` for multi-skill repos). The sdlc-skills installer clones + symlinks them automatically.
+- Bundled framework-internal skills (e.g. taskbox, memory): add to `skills/<name>/` in this repo.
+
+The supervisor's `install.sh` delegates all content installation to `npx github:arozumenko/sdlc-skills init`, which auto-resolves each agent's declared skills — monorepo and external alike.

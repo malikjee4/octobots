@@ -4,3 +4,4 @@ rich>=13.0
 cryptography>=41.0
 watchdog>=4.0
 mcp>=1.0
+pyyaml>=6.0

@@ -1,5 +1,5 @@
 {
-  "_comment": "Octobots agent registry. Each agent entry is addressable by `monorepo: sdlc-skills` + `name: <subdir>` for entries in the arozumenko/sdlc-skills monorepo, or by `repo: owner/repo` (+ optional `ref`) for third-party agent repos. Optional fields `group` (core|dev|qa), `theme` (tmux styling), and `aliases` (shorthand resolution) drive the install-time selector and runtime display — add them once here and every consumer (select-agents.py, supervisor.py, roles.py) picks them up without code changes.",
+  "_comment": "Octobots install-time agent catalog. Each entry tells the team picker (scripts/select-agents.py) how to install an agent (monorepo: sdlc-skills + name: <subdir>, or repo: owner/repo + optional ref) and where to group it in the UI (core | dev | qa). Runtime metadata (theme, aliases) is NOT here — it lives in each installed agent's AGENT.md frontmatter (see scripts/agent_registry.py). For third-party agents that don't ship that metadata, use octobots/agent-overrides.json to supply it.",
 
   "monorepo": {
     "id": "sdlc-skills",
@@ -15,9 +15,7 @@
       "description": "Kit — codebase scout and project configurator",
       "role": "scout",
       "required": true,
-      "group": "core",
-      "theme": {"color": "colour252", "icon": "🔍", "short_name": "scout"},
-      "aliases": ["kit"]
+      "group": "core"
     },
     {
       "id": "project-manager",
@@ -25,9 +23,7 @@
       "name": "project-manager",
       "description": "Max — orchestrates tasks, routes work, tracks progress",
       "role": "project-manager",
-      "group": "core",
-      "theme": {"color": "colour213", "icon": "📋", "short_name": "pm"},
-      "aliases": ["pm", "max"]
+      "group": "core"
     },
     {
       "id": "ba",
@@ -35,9 +31,7 @@
       "name": "ba",
       "description": "Alex — requirements, user stories, acceptance criteria",
       "role": "ba",
-      "group": "core",
-      "theme": {"color": "colour183", "icon": "📝", "short_name": "ba"},
-      "aliases": ["alex"]
+      "group": "core"
     },
     {
       "id": "tech-lead",
@@ -45,9 +39,7 @@
       "name": "tech-lead",
       "description": "Rio — technical decomposition, interface design, code review",
       "role": "tech-lead",
-      "group": "core",
-      "theme": {"color": "colour209", "icon": "🏗️", "short_name": "tl"},
-      "aliases": ["tl", "rio"]
+      "group": "core"
     },
     {
       "id": "python-dev",
@@ -55,9 +47,7 @@
       "name": "python-dev",
       "description": "Py — methodical Python developer",
       "role": "python-dev",
-      "group": "dev",
-      "theme": {"color": "colour117", "icon": "🐍", "short_name": "py"},
-      "aliases": ["py"]
+      "group": "dev"
     },
     {
       "id": "js-dev",
@@ -65,9 +55,7 @@
       "name": "js-dev",
       "description": "Jay — TypeScript / React / Node developer",
       "role": "js-dev",
-      "group": "dev",
-      "theme": {"color": "colour220", "icon": "⚡", "short_name": "js"},
-      "aliases": ["js", "jay"]
+      "group": "dev"
     },
     {
       "id": "ios-dev",
@@ -75,9 +63,7 @@
       "name": "ios-dev",
       "description": "Io — iOS/Swift developer (SwiftUI, SwiftData, Swift Testing)",
       "role": "ios-dev",
-      "group": "dev",
-      "theme": {"color": "colour214", "icon": "📱", "short_name": "io"},
-      "aliases": ["io", "ios"]
+      "group": "dev"
     },
     {
       "id": "qa-sage",
@@ -85,9 +71,7 @@
       "name": "qa-engineer",
       "description": "Sage — meticulous octobots-native QA engineer",
       "role": "qa-engineer",
-      "group": "qa",
-      "theme": {"color": "colour156", "icon": "🧪", "short_name": "qa"},
-      "aliases": ["qa", "sage"]
+      "group": "qa"
     },
     {
       "id": "qa-onetest",
@@ -95,9 +79,7 @@
       "ref": "main",
       "description": "Argus — 13-specialist QA auditor (a11y, security, UX, performance, privacy, mobile, content...)",
       "role": "qa",
-      "group": "qa",
-      "theme": {"color": "colour157", "icon": "🔬", "short_name": "argus"},
-      "aliases": ["argus", "onetest"]
+      "group": "qa"
     },
     {
       "id": "personal-assistant",
@@ -105,9 +87,7 @@
       "name": "personal-assistant",
       "description": "Octo — second-brain personal assistant: signals, knowledge base, open loops",
       "role": "personal-assistant",
-      "group": "core",
-      "theme": {"color": "colour141", "icon": "🟣", "short_name": "pa"},
-      "aliases": ["pa", "octo"]
+      "group": "core"
     }
   ],
 

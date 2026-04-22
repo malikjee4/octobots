@@ -3,48 +3,18 @@
 Used by supervisor, telegram-bridge, and scheduler to resolve
 @shorthand → full role names consistently.
 
-Both tables are loaded from agents.json at import time, so adding a new
-agent (dev, QA, or otherwise) only requires editing the registry — no
-code changes needed in this module.
+All runtime metadata (aliases, display icons, theme colors) is loaded
+from each installed agent's AGENT.md frontmatter via `agent_registry.py`
+and overlaid with octobots/agent-overrides.json for agents that don't
+ship those fields. Adding a new agent to the team requires zero changes
+to this module.
 """
 from __future__ import annotations
 
-import json
-from pathlib import Path
+from agent_registry import role_aliases
 
 
-REGISTRY = Path(__file__).parent.parent / "agents.json"
-
-# Broadcast aliases stay hardcoded — they aren't tied to individual agents.
-_BROADCAST_ALIASES: dict[str, str] = {
-    "all": "all",
-    "everyone": "all",
-    "team": "all",
-}
-
-
-def _load() -> tuple[dict[str, str], dict[str, str]]:
-    aliases: dict[str, str] = dict(_BROADCAST_ALIASES)
-    display: dict[str, str] = {}
-    try:
-        registry = json.loads(REGISTRY.read_text())
-    except (OSError, ValueError):
-        return aliases, display
-    for agent in registry.get("agents", []):
-        role = agent.get("role")
-        if not role:
-            continue
-        aliases[role] = role
-        for alias in agent.get("aliases", []) or []:
-            aliases[alias] = role
-        theme = agent.get("theme") or {}
-        icon = theme.get("icon", "🤖")
-        short = theme.get("short_name", role)
-        display[role] = f"{icon} {short}"
-    return aliases, display
-
-
-ROLE_ALIASES, ROLE_DISPLAY = _load()
+ROLE_ALIASES, ROLE_DISPLAY = role_aliases()
 
 
 def resolve_alias(name: str) -> str:

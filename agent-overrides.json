@@ -1,0 +1,10 @@
+{
+  "_comment": "Metadata overlay for agents that don't ship octobots' group/theme/aliases frontmatter. Keyed by the agent directory name under .claude/agents/ (== the `name:` field in the agent's own AGENT.md). Override values win per top-level key; nested dicts merge one level deep. Add entries here for any third-party agent you want re-skinned in the supervisor TUI or addressable by a nicer alias. Agents from arozumenko/sdlc-skills already carry these fields in their own frontmatter and don't need overrides.",
+  "overrides": {
+    "qa": {
+      "group": "qa",
+      "theme": {"color": "colour157", "icon": "🔬", "short_name": "argus"},
+      "aliases": ["argus", "onetest"]
+    }
+  }
+}
