@@ -139,15 +139,17 @@ if [[ -z "$ROLE_DIR" ]]; then
     exit 1
 fi
 
-# ── Ensure .octobots runtime dirs exist ──────────────────────────────────
-mkdir -p "$PROJECT_DIR/.octobots/memory"
+# ── Ensure runtime dirs exist ─────────────────────────────────────────────
+# Memory lives at .agents/memory/<role>/ (IDE-neutral); memory.py auto-migrates
+# from legacy locations (.octobots/memory/, .claude/memory/) on first access.
+mkdir -p "$PROJECT_DIR/.agents/memory"
 
 # ── Initialize taskbox DB ────────────────────────────────────────────────
 export OCTOBOTS_DB="$PROJECT_DIR/.octobots/relay.db"
 python3 "$SCRIPT_DIR/skills/taskbox/scripts/relay.py" init > /dev/null 2>&1 || true
 
 # ── Regenerate memory snapshot for this role ─────────────────────────────
-# AGENT.md @-imports .octobots/memory/<role>/snapshot.md so curated memory
+# AGENT.md @-imports .agents/memory/<role>/snapshot.md so curated memory
 # and recent daily logs land in the system prompt at session start.
 python3 "$SCRIPT_DIR/skills/memory/scripts/memory.py" --role "$ROLE" snapshot > /dev/null 2>&1 || true
 

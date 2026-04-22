@@ -37,7 +37,8 @@ echo "Initializing .octobots/ in $PROJECT_DIR"
 [[ "$MODE" == "pa" ]] && MODE="personal-assistant"
 
 # ── Create directory structure ──────────────────────────────────────────────
-mkdir -p "$RUNTIME/memory"
+# Memory lives at .agents/memory/ (project-root, IDE-neutral) — not .octobots/memory/.
+# See "Create memory dirs for installed roles" below.
 mkdir -p "$RUNTIME/roles"
 mkdir -p "$RUNTIME/skills"
 mkdir -p "$RUNTIME/agents"
@@ -121,24 +122,20 @@ EOF
     echo "  Created board.md"
 fi
 
-# ── Create memory files for installed roles ────────────────────────────────
+# ── Create memory dirs for installed roles ──────────────────────────────────
+# Memory lives at .agents/memory/<role>/ (IDE-neutral). Scout seeds a
+# project_briefing.md curated entry here when it onboards the project —
+# this block only ensures the directory structure exists so agents can
+# write immediately.
+AGENTS_MEMORY="$PROJECT_DIR/.agents/memory"
+mkdir -p "$AGENTS_MEMORY"
 for role_dir in "$PROJECT_DIR/.claude/agents"/*/; do
     [[ -f "$role_dir/AGENT.md" ]] || continue
     role="$(basename "$role_dir")"
-    memory_file="$RUNTIME/memory/${role}.md"
-    if [[ ! -f "$memory_file" ]]; then
-        cat > "$memory_file" << EOF
-# Memory — $role
-
-Persistent learnings from past conversations. Read this before starting work.
-
-## Project Knowledge
-
-## Lessons Learned
-
-## Notes
-EOF
-        echo "  Created memory/$role.md"
+    role_mem="$AGENTS_MEMORY/$role"
+    if [[ ! -d "$role_mem" ]]; then
+        mkdir -p "$role_mem/daily"
+        echo "  Created .agents/memory/$role/"
     fi
 done
 
@@ -384,7 +381,7 @@ generate_worker_claude() {
 - **Taskbox inbox**: \`python octobots/skills/taskbox/scripts/relay.py inbox --id $worker\`
 - **Send message**: \`python octobots/skills/taskbox/scripts/relay.py send --from $worker --to <role> "message"\`
 - **Ack message**: \`python octobots/skills/taskbox/scripts/relay.py ack MSG_ID "summary"\`
-- **Memory file**: \`.octobots/memory/$worker.md\`
+- **Memory dir**: \`.agents/memory/$worker/\` (MEMORY.md index + curated entries + daily/ logs — see the \`memory\` skill)
 - **Active skills**: ${skills_val:-all}
 
 ## Notifying the user (Telegram)

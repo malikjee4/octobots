@@ -218,20 +218,28 @@ def check_1_relay_db() -> CheckResult:
 def check_2_memory_files(roles: list[str]) -> CheckResult:
     if not roles:
         return CheckResult(2, "memory files", SKIP, "no roles configured")
-    mem_dir = PROJECT_DIR / ".octobots" / "memory"
-    missing, empty = [], []
+    # Memory lives at .agents/memory/<role>/ with a project_briefing.md curated entry
+    # seeded by scout's project-seeder. Check for both the dir and the briefing file.
+    mem_dir = PROJECT_DIR / ".agents" / "memory"
+    missing_dir, missing_briefing, empty = [], [], []
     for role_id in roles:
-        f = mem_dir / f"{role_id}.md"
-        if not f.exists():
-            missing.append(role_id)
-        elif f.stat().st_size < 10:
+        role_dir = mem_dir / role_id
+        if not role_dir.is_dir():
+            missing_dir.append(role_id)
+            continue
+        briefing = role_dir / "project_briefing.md"
+        if not briefing.is_file():
+            missing_briefing.append(role_id)
+        elif briefing.stat().st_size < 50:
             empty.append(role_id)
 
-    if missing:
-        return CheckResult(2, "memory files", WARN, f"missing: {', '.join(missing)}")
+    if missing_dir:
+        return CheckResult(2, "memory files", WARN, f"no .agents/memory/<role>/ for: {', '.join(missing_dir)}")
+    if missing_briefing:
+        return CheckResult(2, "memory files", WARN, f"no project_briefing.md for: {', '.join(missing_briefing)} (run scout)")
     if empty:
-        return CheckResult(2, "memory files", WARN, f"empty (not seeded): {', '.join(empty)}")
-    return CheckResult(2, "memory files", PASS, f"{len(roles)}/{len(roles)} roles have seeded memory files")
+        return CheckResult(2, "memory files", WARN, f"briefing not filled in for: {', '.join(empty)}")
+    return CheckResult(2, "memory files", PASS, f"{len(roles)}/{len(roles)} roles have seeded memory briefings")
 
 
 def check_3_role_files(roles: list[str]) -> CheckResult:

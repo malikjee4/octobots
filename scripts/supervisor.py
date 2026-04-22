@@ -2596,9 +2596,9 @@ def main() -> None:
     parser.add_argument("--workers", nargs="*", help="Specific workers to launch")
     args = parser.parse_args()
 
-    # Ensure runtime dir
+    # Ensure runtime dir (memory lives at .agents/memory/, created by init-project.sh)
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-    (RUNTIME_DIR / "memory").mkdir(exist_ok=True)
+    (PROJECT_DIR / ".agents" / "memory").mkdir(parents=True, exist_ok=True)
 
     # `--workers` not passed → auto-discover.
     # `--workers` passed with zero args → start empty, build the team interactively

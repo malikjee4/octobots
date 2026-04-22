@@ -10,7 +10,7 @@ metadata:
 
 # Memory
 
-Persistent per-role memory. Two complementary stores under `.octobots/memory/<role>/`:
+Persistent per-role memory. Two complementary stores under `.agents/memory/<role>/`:
 
 - **Curated** — typed entries (`<name>.md` with frontmatter) plus an index `MEMORY.md`. For facts that should survive across many sessions: user preferences, project decisions, feedback, references.
 - **Daily log** — `daily/YYYY-MM-DD.md`, append-only timestamped lines. For episodic recall: what you did, what the user said, transient context. Bounded by date so it doesn't grow forever.
@@ -57,4 +57,4 @@ If unsure: `log` it. The next snapshot will surface it; you can promote to a cur
 
 ## Auto-load
 
-Roles import their snapshot via `@.octobots/memory/<role>/snapshot.md` at the top of their AGENT.md. Claude Code resolves the import at session start so curated entries and recent daily logs are part of the system prompt automatically. The supervisor regenerates `snapshot.md` before every role spawn.
+Roles import their snapshot via `@.agents/memory/<role>/snapshot.md` at the top of their AGENT.md. The path is IDE-neutral — `.agents/` works under Claude Code, Cursor, Gemini CLI, Copilot CLI, Windsurf, or Octobots. Claude Code resolves the import at session start so curated entries and recent daily logs are part of the system prompt automatically. The supervisor regenerates `snapshot.md` before every role spawn.
