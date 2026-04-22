@@ -43,10 +43,10 @@ octobots/start.sh scout
 
 Kit explores the codebase and generates:
 - `AGENTS.md` — project context all roles read
-- `.octobots/profile.md` — project card
-- `.octobots/conventions.md` — detected coding standards
-- `.octobots/architecture.md` — system design map
-- `.octobots/testing.md` — test infrastructure
+- `.agents/profile.md` — project card
+- `.agents/conventions.md` — detected coding standards
+- `.agents/architecture.md` — system design map
+- `.agents/testing.md` — test infrastructure
 
 ## Running the Team
 
@@ -220,12 +220,22 @@ octobots/              ← framework (git pull for updates, read-only)
 ├── shared/              conventions, agents
 └── scripts/             supervisor, bridge, scheduler, roles, relay
 
-.octobots/             ← runtime (project-specific, workers read/write)
-├── board.md             team whiteboard (all roles)
-├── memory/              per-role learnings
-│   ├── python-dev.md
-│   ├── js-dev.md
-│   └── ...
+.agents/               ← IDE-neutral content (every agent, every IDE reads)
+├── profile.md           scout output — project card
+├── architecture.md      scout output — system design
+├── conventions.md       scout output — coding standards
+├── testing.md           scout output — test infra
+├── team-comms.md        scout output — transport + roster
+├── onboarding.md        scout audit trail
+└── memory/              per-role memory (memory skill spec)
+    └── <role>/
+        ├── MEMORY.md                index
+        ├── project_briefing.md      scout-seeded `type: project` entry
+        ├── daily/                   append-only daily logs
+        └── snapshot.md              supervisor-regenerated at launch
+
+.octobots/             ← supervisor runtime state (workers + taskbox only)
+├── board.md             team whiteboard (supervisor-managed)
 ├── roles/               project role overrides
 ├── skills/              project-specific skills
 ├── agents/              project-specific agents
@@ -235,7 +245,8 @@ octobots/              ← framework (git pull for updates, read-only)
 │   └── qa-engineer/       own repo clones
 ├── relay.db             taskbox database
 ├── schedule.json        scheduled jobs (persistent)
-└── profile.md           scout output
+├── registry/            cached clones of third-party agent/skill repos
+└── roles-manifest.yaml  check-spawn-ready.py input (scout generates)
 ```
 
 **Resolution order:** `.octobots/roles/<role>/` (project overrides) takes priority over `.claude/agents/<role>/` (installed via `npx github:<repo> init`). `octobots/` is framework code only — re-running `install.sh` wipes and re-extracts it, so never put user data there.

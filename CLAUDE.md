@@ -162,14 +162,22 @@ Shared agents in `shared/agents/`:
 
 Clone workers (`workspace: clone`) additionally get isolated git clones for each repo.
 
-### Runtime Directory (`.octobots/`)
+### Runtime directories (`.agents/` + `.octobots/`)
 
-Created by `scripts/init-project.sh` in the target project, not in the octobots repo itself:
-- `board.md` — Team board (auto-created if missing)
-- `relay.db` — SQLite taskbox
-- `memory/` — Per-role MEMORY.md files
-- `workers/` — Isolated worker environments
-- `schedule.json` — Persistent scheduled jobs
+Created by `scripts/init-project.sh` in the target project, not in the octobots repo itself. The split mirrors the content / orchestration architecture:
+
+- **`.agents/`** — IDE-neutral content read by every agent on every IDE (scout writes it):
+  - `profile.md`, `architecture.md`, `conventions.md`, `testing.md`, `team-comms.md`, `onboarding.md`
+  - `memory/<role>/` — memory-skill-spec directory (MEMORY.md index, curated entries, daily/ logs, snapshot.md)
+
+- **`.octobots/`** — supervisor runtime state (only meaningful when the supervisor is running):
+  - `board.md` — Team board (auto-created if missing)
+  - `relay.db` — SQLite taskbox
+  - `workers/` — Isolated worker environments
+  - `roles/` — project role overrides
+  - `schedule.json` — Persistent scheduled jobs
+  - `registry/` — cached clones of third-party agent/skill repos
+  - `roles-manifest.yaml` — check-spawn-ready.py input (scout generates)
 
 ## Key Conventions
 
