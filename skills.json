@@ -32,6 +32,9 @@
     {"id": "tdd",                         "repo": "mattpocock/skills",   "ref": "main", "subdir": "tdd",                            "description": "Test-driven development — vertical-slice tracer bullets, integration-style tests, interface design for testability (by Matt Pocock)"},
     {"id": "brainstorming",               "repo": "obra/superpowers",    "ref": "main", "subdir": "skills/brainstorming",           "description": "Ideation before coding — explore the problem space before committing to a solution (from obra/superpowers)"},
     {"id": "systematic-debugging",        "repo": "obra/superpowers",    "ref": "main", "subdir": "skills/systematic-debugging",    "description": "Root-cause tracing, condition-based waiting, defense-in-depth for reproducing and fixing bugs (from obra/superpowers)"},
-    {"id": "verification-before-completion", "repo": "obra/superpowers", "ref": "main", "subdir": "skills/verification-before-completion", "description": "Pre-handoff check — verify the work against the spec before calling it done (from obra/superpowers)"}
+    {"id": "verification-before-completion", "repo": "obra/superpowers", "ref": "main", "subdir": "skills/verification-before-completion", "description": "Pre-handoff check — verify the work against the spec before calling it done (from obra/superpowers)"},
+    {"id": "writing-skills",              "repo": "obra/superpowers",    "ref": "main", "subdir": "skills/writing-skills",          "description": "Meta-skill for authoring SKILL.md files — structure, triggers, and verification (from obra/superpowers)"},
+    {"id": "requesting-code-review",      "repo": "obra/superpowers",    "ref": "main", "subdir": "skills/requesting-code-review",  "description": "How to hand off work for review — prepare context, state scope, make the reviewer's job easy (from obra/superpowers)"},
+    {"id": "receiving-code-review",       "repo": "obra/superpowers",    "ref": "main", "subdir": "skills/receiving-code-review",   "description": "How to process review feedback — verify technically, don't perform agreement (from obra/superpowers)"}
   ]
 }
