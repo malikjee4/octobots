@@ -235,9 +235,16 @@ DEST="$DEST" python3 "$DEST/scripts/apply-skill-deps.py"
 
 echo ""
 echo "Configuring notify MCP server..."
+NOTIFY_PYTHON="python3"
+if [[ -d "venv" ]]; then
+    NOTIFY_PYTHON="venv/bin/python3"
+elif [[ -d ".venv" ]]; then
+    NOTIFY_PYTHON=".venv/bin/python3"
+fi
 python3 -c "
 import json, sys
 mcp_file = '.mcp.json'
+notify_python = sys.argv[1]
 try:
     with open(mcp_file) as f:
         cfg = json.load(f)
@@ -246,15 +253,15 @@ except (FileNotFoundError, json.JSONDecodeError):
 cfg.setdefault('mcpServers', {})
 if 'notify' not in cfg['mcpServers']:
     cfg['mcpServers']['notify'] = {
-        'command': 'python3',
+        'command': notify_python,
         'args': ['octobots/mcp/notify/server.py']
     }
     with open(mcp_file, 'w') as f:
         json.dump(cfg, f, indent=2)
-    print('  + MCP: notify (Telegram notifications)')
+    print(f'  + MCP: notify (Telegram notifications, via {notify_python})')
 else:
     print('  - MCP: notify (already configured)')
-"
+" "$NOTIFY_PYTHON"
 
 # ── Initialize runtime ────────────────────────────────────────────────────────
 
