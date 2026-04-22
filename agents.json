@@ -1,5 +1,5 @@
 {
-  "_comment": "Octobots agent registry. Most agents now live in the arozumenko/sdlc-skills monorepo and are installed via that single repo's installer. Each entry references either `monorepo: sdlc-skills` (with `name` = subdir under sdlc-skills/agents/) or `repo: owner/repo` for third-party agent repos kept on their own.",
+  "_comment": "Octobots agent registry. Each agent entry is addressable by `monorepo: sdlc-skills` + `name: <subdir>` for entries in the arozumenko/sdlc-skills monorepo, or by `repo: owner/repo` (+ optional `ref`) for third-party agent repos. Optional fields `group` (core|dev|qa), `theme` (tmux styling), and `aliases` (shorthand resolution) drive the install-time selector and runtime display — add them once here and every consumer (select-agents.py, supervisor.py, roles.py) picks them up without code changes.",
 
   "monorepo": {
     "id": "sdlc-skills",
@@ -14,49 +14,70 @@
       "name": "scout",
       "description": "Kit — codebase scout and project configurator",
       "role": "scout",
-      "required": true
+      "required": true,
+      "group": "core",
+      "theme": {"color": "colour252", "icon": "🔍", "short_name": "scout"},
+      "aliases": ["kit"]
     },
     {
       "id": "project-manager",
       "monorepo": "sdlc-skills",
       "name": "project-manager",
       "description": "Max — orchestrates tasks, routes work, tracks progress",
-      "role": "project-manager"
-    },
-    {
-      "id": "python-dev",
-      "monorepo": "sdlc-skills",
-      "name": "python-dev",
-      "description": "Py — methodical Python developer",
-      "role": "python-dev"
-    },
-    {
-      "id": "js-dev",
-      "monorepo": "sdlc-skills",
-      "name": "js-dev",
-      "description": "Jay — TypeScript / React / Node developer",
-      "role": "js-dev"
-    },
-    {
-      "id": "ios-dev",
-      "monorepo": "sdlc-skills",
-      "name": "ios-dev",
-      "description": "Io — iOS/Swift developer (SwiftUI, SwiftData, Swift Testing)",
-      "role": "ios-dev"
+      "role": "project-manager",
+      "group": "core",
+      "theme": {"color": "colour213", "icon": "📋", "short_name": "pm"},
+      "aliases": ["pm", "max"]
     },
     {
       "id": "ba",
       "monorepo": "sdlc-skills",
       "name": "ba",
       "description": "Alex — requirements, user stories, acceptance criteria",
-      "role": "ba"
+      "role": "ba",
+      "group": "core",
+      "theme": {"color": "colour183", "icon": "📝", "short_name": "ba"},
+      "aliases": ["alex"]
     },
     {
       "id": "tech-lead",
       "monorepo": "sdlc-skills",
       "name": "tech-lead",
       "description": "Rio — technical decomposition, interface design, code review",
-      "role": "tech-lead"
+      "role": "tech-lead",
+      "group": "core",
+      "theme": {"color": "colour209", "icon": "🏗️", "short_name": "tl"},
+      "aliases": ["tl", "rio"]
+    },
+    {
+      "id": "python-dev",
+      "monorepo": "sdlc-skills",
+      "name": "python-dev",
+      "description": "Py — methodical Python developer",
+      "role": "python-dev",
+      "group": "dev",
+      "theme": {"color": "colour117", "icon": "🐍", "short_name": "py"},
+      "aliases": ["py"]
+    },
+    {
+      "id": "js-dev",
+      "monorepo": "sdlc-skills",
+      "name": "js-dev",
+      "description": "Jay — TypeScript / React / Node developer",
+      "role": "js-dev",
+      "group": "dev",
+      "theme": {"color": "colour220", "icon": "⚡", "short_name": "js"},
+      "aliases": ["js", "jay"]
+    },
+    {
+      "id": "ios-dev",
+      "monorepo": "sdlc-skills",
+      "name": "ios-dev",
+      "description": "Io — iOS/Swift developer (SwiftUI, SwiftData, Swift Testing)",
+      "role": "ios-dev",
+      "group": "dev",
+      "theme": {"color": "colour214", "icon": "📱", "short_name": "io"},
+      "aliases": ["io", "ios"]
     },
     {
       "id": "qa-sage",
@@ -64,26 +85,39 @@
       "name": "qa-engineer",
       "description": "Sage — meticulous octobots-native QA engineer",
       "role": "qa-engineer",
-      "group": "qa"
+      "group": "qa",
+      "theme": {"color": "colour156", "icon": "🧪", "short_name": "qa"},
+      "aliases": ["qa", "sage"]
     },
     {
       "id": "qa-onetest",
       "repo": "onetest-ai/qa-agent",
       "ref": "main",
-      "description": "OneTest QA — 13 specialist domains (a11y, security, UX, performance, privacy...)",
-      "role": "qa-engineer",
-      "group": "qa"
+      "description": "Argus — 13-specialist QA auditor (a11y, security, UX, performance, privacy, mobile, content...)",
+      "role": "qa",
+      "group": "qa",
+      "theme": {"color": "colour157", "icon": "🔬", "short_name": "argus"},
+      "aliases": ["argus", "onetest"]
     },
     {
       "id": "personal-assistant",
       "monorepo": "sdlc-skills",
       "name": "personal-assistant",
-      "description": "PA — second-brain personal assistant: signals, knowledge base, open loops",
-      "role": "personal-assistant"
+      "description": "Octo — second-brain personal assistant: signals, knowledge base, open loops",
+      "role": "personal-assistant",
+      "group": "core",
+      "theme": {"color": "colour141", "icon": "🟣", "short_name": "pa"},
+      "aliases": ["pa", "octo"]
     }
   ],
 
   "presets": [
+    {
+      "name": "iOS development",
+      "description": "Mobile team — Scout, BA, Tech Lead, PM, iOS dev, QA",
+      "agents": ["scout", "ba", "tech-lead", "project-manager", "ios-dev"],
+      "qa": "qa-sage"
+    },
     {
       "name": "SDLC team",
       "description": "Full delivery team — Scout onboards first, then BA, Tech Lead, PM, Python Dev, JS Dev, QA",
@@ -94,6 +128,12 @@
       "name": "Personal assistant",
       "description": "Solo PA — second-brain / journaling / inbox triage",
       "agents": ["personal-assistant"],
+      "qa": null
+    },
+    {
+      "name": "Custom",
+      "description": "Pick each agent yourself (core roles one-by-one, devs and QA as multi-select)",
+      "agents": [],
       "qa": null
     }
   ]

@@ -73,10 +73,24 @@ Roles with `workspace: clone` get isolated repo clones under `.octobots/workers/
 ```json
 {
   "monorepo": { "id": "sdlc-skills", "repo": "arozumenko/sdlc-skills", "ref": "main" },
-  "agents": [{ "id": "scout", "monorepo": "sdlc-skills", "name": "scout", "required": true }, ...],
-  "presets": [{ "name": "Full-stack web team", "agents": [...], "qa": "qa-onetest" }, ...]
+  "agents": [{
+    "id": "scout", "monorepo": "sdlc-skills", "name": "scout", "required": true,
+    "group": "core",
+    "theme": {"color": "colour252", "icon": "🔍", "short_name": "scout"},
+    "aliases": ["kit"]
+  }, ...],
+  "presets": [{ "name": "iOS development", "agents": [...], "qa": "qa-sage" }, ...]
 }
 ```
+
+Each agent's optional `group` (`core` | `dev` | `qa`) determines how
+`select-agents.py` groups it in the Custom flow (core = y/n each, devs =
+multi-select, qas = picker). `theme` drives the tmux pane styling in
+supervisor.py (`ROLE_THEME` is loaded from this file at import time).
+`aliases` drives shorthand resolution in `scripts/roles.py`
+(`ROLE_ALIASES`/`ROLE_DISPLAY` are loaded from this file too). Adding a new
+dev or QA is a one-file change — register it here with group/theme/aliases
+and every consumer picks it up.
 
 ### Taskbox (Inter-Role Messaging)
 
@@ -182,8 +196,14 @@ OCTOBOTS_EXCLUDED_ROLES=scout
 ## Adding a New Role
 
 1. Add `agents/<name>/AGENT.md` (with YAML frontmatter) and `agents/<name>/SOUL.md` to `arozumenko/sdlc-skills`
-2. Register in `agents.json` under `"agents"` with `monorepo: sdlc-skills` and `name: <name>`
+2. Register in `agents.json` under `"agents"` with `monorepo: sdlc-skills` and `name: <name>`. Add:
+   - `role: <name>` — the worker id at runtime (must match the dir the installer drops into)
+   - `group: "core" | "dev" | "qa"` — where it appears in the Custom selector
+   - `theme: {color, icon, short_name}` — tmux pane styling
+   - `aliases: [short, nickname, ...]` — @shorthand resolution (e.g. `["io", "ios"]` for ios-dev)
 3. Use `workspace: clone` in AGENT.md frontmatter if the role needs an isolated repo clone
+4. No Python changes required — `supervisor.py`, `scripts/roles.py`, and `scripts/select-agents.py`
+   all read the registry at startup.
 
 ## Adding a New Skill
 

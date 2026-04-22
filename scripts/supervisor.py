@@ -6,7 +6,7 @@ Replaces supervisor.sh with a proper Python implementation.
 Usage:
   python octobots/scripts/supervisor.py
   python octobots/scripts/supervisor.py --interval 10
-  python octobots/scripts/supervisor.py --workers python-dev js-dev
+  python octobots/scripts/supervisor.py --workers python-dev ios-dev
 """
 from __future__ import annotations
 
@@ -47,18 +47,34 @@ INSTALLED_AGENTS = PROJECT_DIR / ".claude" / "agents"
 
 TMUX_SESSION = "octobots"
 EXCLUDED_ROLES = {"scout"}
-WORKTREE_ROLES = {"python-dev", "js-dev"}
 
-# Role theming — colors and display names for tmux panes
-ROLE_THEME: dict[str, dict[str, str]] = {
-    "project-manager": {"color": "colour213", "icon": "📋", "name": "pm"},
-    "python-dev":      {"color": "colour117", "icon": "🐍", "name": "py"},
-    "js-dev":          {"color": "colour220", "icon": "⚡", "name": "js"},
-    "qa-engineer":     {"color": "colour156", "icon": "🧪", "name": "qa"},
-    "ba":              {"color": "colour183", "icon": "📝", "name": "ba"},
-    "tech-lead":       {"color": "colour209", "icon": "🏗️", "name": "tl"},
-    "scout":           {"color": "colour252", "icon": "🔍", "name": "scout"},
-}
+
+def _load_role_theme() -> dict[str, dict[str, str]]:
+    """Load per-role tmux pane theming (color/icon/short_name) from agents.json.
+
+    Unknown roles fall back to a generic 🤖 via ROLE_THEME.get(role, default)
+    at the call site — no hardcoded table to keep in sync.
+    """
+    themes: dict[str, dict[str, str]] = {}
+    registry_path = OCTOBOTS_DIR / "agents.json"
+    try:
+        registry = json.loads(registry_path.read_text())
+    except (OSError, ValueError):
+        return themes
+    for agent in registry.get("agents", []):
+        role = agent.get("role")
+        theme = agent.get("theme")
+        if not role or not theme:
+            continue
+        themes[role] = {
+            "color": theme.get("color", "colour250"),
+            "icon": theme.get("icon", "🤖"),
+            "name": theme.get("short_name", role),
+        }
+    return themes
+
+
+ROLE_THEME: dict[str, dict[str, str]] = _load_role_theme()
 
 console = Console()
 

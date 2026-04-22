@@ -3,12 +3,24 @@
 Interactive team selector for octobots install.
 
 Reads agents.json, prompts the user to choose a team preset or build a custom
-selection, then prints the selected GitHub repos to stdout (one per line).
+selection, then prints the selected entries (one per line) to stdout. install.sh
+consumes those lines and routes each to the correct installer:
+
+  sdlc:<name>      → batched `npx github:arozumenko/sdlc-skills init --agents …`
+  owner/repo@ref   → `npx github:<repo>#<ref> init --all` (individual)
 
 Usage:
     python3 octobots/scripts/select-agents.py                  # interactive
-    python3 octobots/scripts/select-agents.py --preset 0       # preset by index (0-based), non-interactive
+    python3 octobots/scripts/select-agents.py --preset 0       # preset by index, non-interactive
     python3 octobots/scripts/select-agents.py --all            # all agents, non-interactive
+
+Preset flow:
+  - Pick one of the presets listed in agents.json
+  - "Custom" enters a structured per-group picker:
+      * core roles (pm, ba, tl, pa, ...) — one y/n each
+      * devs (group: "dev") — multi-select (comma-separated indexes, or "all")
+      * QAs (group: "qa") — single pick
+  - Non-Custom presets install their `agents:` list as-is, then optionally swap the QA
 """
 
 import json
@@ -39,12 +51,15 @@ def prompt(msg, default=""):
 def select_qa(qa_agents, current=None):
     """Let user pick a QA agent (or none). Returns agent id or None."""
     print("\n  ── QA Agent ──────────────────────────────────────────────")
+    default_idx = 1
     for i, a in enumerate(qa_agents, 1):
         mark = " (default)" if a["id"] == current else ""
+        if a["id"] == current:
+            default_idx = i
         print(f"    {i}. {a['description']}{mark}")
     print("    s. Skip QA for now")
     print()
-    choice = prompt("  Choose QA agent [1]: ", "1")
+    choice = prompt(f"  Choose QA agent [{default_idx}]: ", str(default_idx))
     if choice.lower() == "s":
         return None
     try:
@@ -53,17 +68,80 @@ def select_qa(qa_agents, current=None):
             return qa_agents[idx]["id"]
     except ValueError:
         pass
-    return qa_agents[0]["id"] if qa_agents else None
+    return qa_agents[default_idx - 1]["id"] if qa_agents else None
+
+
+def select_devs(devs):
+    """Multi-select devs. Returns list of agent ids."""
+    if not devs:
+        return []
+    print("\n  ── Developers ────────────────────────────────────────────")
+    for i, a in enumerate(devs, 1):
+        print(f"    {i}. {a['description']}")
+    print("    Enter comma-separated numbers, 'all', or blank to skip.")
+    print()
+    choice = prompt("  Pick devs [1]: ", "1")
+    if not choice or choice.lower() in {"none", "skip", "s"}:
+        return []
+    if choice.lower() == "all":
+        return [d["id"] for d in devs]
+    picks: list[str] = []
+    seen: set[int] = set()
+    for part in choice.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            idx = int(part) - 1
+        except ValueError:
+            continue
+        if 0 <= idx < len(devs) and idx not in seen:
+            seen.add(idx)
+            picks.append(devs[idx]["id"])
+    return picks
+
+
+def run_custom(registry):
+    """Pick each agent via a structured per-group flow.
+
+    Order: required (auto) -> core (y/n each) -> devs (multi-select) -> QA (picker).
+    """
+    selected: list[str] = []
+
+    required = [a for a in registry["agents"] if a.get("required")]
+    core = [a for a in registry["agents"]
+            if a.get("group") == "core" and not a.get("required")]
+    devs = [a for a in registry["agents"] if a.get("group") == "dev"]
+    qas = [a for a in registry["agents"] if a.get("group") == "qa"]
+
+    for a in required:
+        selected.append(a["id"])
+        print(f"    + {a['description']} (required)")
+
+    if core:
+        print("\n  ── Core roles ────────────────────────────────────────────")
+        for a in core:
+            ans = prompt(f"    Include {a['description']}? [Y/n]: ", "y")
+            if ans.lower() not in {"n", "no"}:
+                selected.append(a["id"])
+
+    selected.extend(select_devs(devs))
+
+    if qas:
+        chosen_qa = select_qa(qas, current=qas[0]["id"])
+        if chosen_qa:
+            selected.append(chosen_qa)
+
+    return selected
 
 
 def run_interactive(registry):
-    agents = agents_by_id(registry)
     presets = registry.get("presets", [])
-    qa_agents = [a for a in registry["agents"] if a.get("group") == "qa"]
 
     print()
     print("  ── Team Setup ────────────────────────────────────────────")
     print()
+    agents = agents_by_id(registry)
     for i, p in enumerate(presets, 1):
         print(f"    {i}. {p['name']}")
         print(f"       {p['description']}")
@@ -80,31 +158,21 @@ def run_interactive(registry):
     preset_idx = max(0, min(preset_idx, len(presets) - 1))
     preset = presets[preset_idx]
 
-    selected_ids = list(preset.get("agents", []))
-    default_qa = preset.get("qa")
-
     if preset["name"] == "Custom":
-        # Custom: let user pick each agent
-        print()
-        print("  ── Select agents ─────────────────────────────────────────")
-        non_qa = [a for a in registry["agents"] if not a.get("group") and not a.get("required")]
-        for a in non_qa:
-            ans = prompt(f"    Include {a['description']}? [y/n]: ", "y")
-            if ans.lower() != "n":
-                selected_ids.append(a["id"])
+        return run_custom(registry)
 
-    # Always include required agents
+    selected_ids = list(preset.get("agents", []))
+
     required = [a["id"] for a in registry["agents"] if a.get("required")]
     for r in required:
         if r not in selected_ids:
             selected_ids.insert(0, r)
 
-    # QA selection
-    chosen_qa = None
+    qa_agents = [a for a in registry["agents"] if a.get("group") == "qa"]
     if qa_agents:
-        chosen_qa = select_qa(qa_agents, default_qa)
-    if chosen_qa:
-        selected_ids.append(chosen_qa)
+        chosen_qa = select_qa(qa_agents, preset.get("qa"))
+        if chosen_qa:
+            selected_ids.append(chosen_qa)
 
     return selected_ids
 
@@ -116,7 +184,7 @@ def run_all(registry):
     selected = []
     for a in agents:
         group = a.get("group")
-        if group:
+        if group == "qa":
             if group not in qa_groups:
                 qa_groups[group] = a["id"]
                 selected.append(a["id"])
@@ -128,10 +196,12 @@ def run_all(registry):
 def run_preset(registry, idx):
     """Return agents for a specific preset by index."""
     presets = registry.get("presets", [])
-    agents = agents_by_id(registry)
     if idx >= len(presets):
         idx = 0
     preset = presets[idx]
+    if preset["name"] == "Custom":
+        # --preset N is non-interactive; Custom has no concrete list.
+        return []
     selected = list(preset.get("agents", []))
     required = [a["id"] for a in registry["agents"] if a.get("required")]
     for r in required:
