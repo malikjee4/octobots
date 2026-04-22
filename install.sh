@@ -183,7 +183,10 @@ if command -v npx &>/dev/null; then
                 echo "  ✓ $skill_id (already present)"
                 continue
             fi
-            # Resolve skill_id against skills.json → "monorepo" | "<owner/repo>[@ref]" | "unknown"
+            # Resolve skill_id against skills.json →
+            #   "monorepo"
+            #   "<owner/repo>|<ref>|<subdir>"  (subdir may be empty)
+            #   "unknown"
             resolution=$(python3 - "$DEST/skills.json" "$skill_id" <<'PY'
 import json, sys
 registry, skill_id = sys.argv[1], sys.argv[2]
@@ -199,7 +202,8 @@ for entry in data.get("skills", []):
     repo = entry.get("repo")
     if repo:
         ref = entry.get("ref", "main")
-        print(f"{repo}@{ref}"); sys.exit(0)
+        subdir = entry.get("subdir", "")
+        print(f"{repo}|{ref}|{subdir}"); sys.exit(0)
     break
 print("unknown")
 PY
@@ -212,12 +216,12 @@ PY
                     echo "  ⚠  $skill_id — not in skills.json, skipping"
                     ;;
                 *)
-                    repo="${resolution%@*}"
-                    ref="${resolution##*@}"
-                    if bash "$DEST/scripts/registry-fetch.sh" skill "$repo" "$ref" >/dev/null; then
-                        echo "  ✓ $skill_id (from $repo@$ref)"
+                    IFS='|' read -r repo ref subdir <<< "$resolution"
+                    where="$repo@$ref${subdir:+ (subdir: $subdir)}"
+                    if bash "$DEST/scripts/registry-fetch.sh" skill "$repo" "$ref" "$subdir" >/dev/null; then
+                        echo "  ✓ $skill_id (from $where)"
                     else
-                        echo "  ⚠  $skill_id — fetch failed from $repo@$ref"
+                        echo "  ⚠  $skill_id — fetch failed from $where"
                     fi
                     ;;
             esac

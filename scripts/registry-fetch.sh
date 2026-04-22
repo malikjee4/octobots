@@ -2,26 +2,32 @@
 # Fetch a role or skill from a GitHub repo into the project.
 #
 # Usage:
-#   registry-fetch.sh agent <owner/repo> [ref]   # → .claude/agents/<name>/
-#   registry-fetch.sh skill <owner/repo> [ref]   # → .claude/skills/<name>/
-#   registry-fetch.sh agent sdlc:<name>          # install one agent from sdlc-skills
-#   registry-fetch.sh skill sdlc:<name>          # install one skill from sdlc-skills
+#   registry-fetch.sh agent <owner/repo> [ref]                  # → .claude/agents/<name>/
+#   registry-fetch.sh skill <owner/repo> [ref] [subdir]         # → .claude/skills/<name>/
+#   registry-fetch.sh agent sdlc:<name>                         # install one agent from sdlc-skills
+#   registry-fetch.sh skill sdlc:<name>                         # install one skill from sdlc-skills
+#
+# For skills in multi-skill repos (e.g. mattpocock/skills → 20 skills, or
+# obra/superpowers with skills nested under skills/<name>/), pass a `subdir`
+# argument pointing at the skill folder inside the repo. This skips the
+# auto-detect npx-skills path and goes straight to git-clone + subdir symlink.
 #
 # Fetch strategy (in order):
 #   1. sdlc:<name>  → npx github:arozumenko/sdlc-skills init --agents/--skills <name>
-#   2. npx "github:<repo>" init --all  (agents)
-#      npx skills add <repo> --yes     (skills)
+#   2. [skills only, no subdir] npx skills add <repo> --yes
+#      [agents] npx "github:<repo>" init --all
 #   3. git clone --depth 1 → .octobots/registry/<repo-name>/
-#      then symlink into .claude/agents/ or .claude/skills/
+#      then symlink (or <subdir>) into .claude/agents/ or .claude/skills/
 #
 # Exits 0 on success, 1 on failure.
 # Prints the installed name to stdout on success (useful for callers).
 
 set -euo pipefail
 
-TYPE="${1:?Usage: registry-fetch.sh <agent|skill> <owner/repo> [ref]}"
+TYPE="${1:?Usage: registry-fetch.sh <agent|skill> <owner/repo> [ref] [subdir]}"
 REPO="${2:?Missing repo argument}"
 REF="${3:-main}"
+SUBDIR="${4:-}"
 
 PROJECT_DIR="$(pwd)"
 RUNTIME="$PROJECT_DIR/.octobots"
@@ -117,7 +123,9 @@ fetch_skill() {
     mkdir -p "$PROJECT_DIR/.claude/skills"
 
     # Strategy 1: npx skills add <repo> --yes
-    if command -v npx &>/dev/null; then
+    # Skipped when SUBDIR is set — multi-skill repos can't be cherry-picked
+    # reliably this way, so fall straight through to the git-clone path.
+    if [[ -z "$SUBDIR" ]] && command -v npx &>/dev/null; then
         before=$(ls "$PROJECT_DIR/.claude/skills/" 2>/dev/null | sort || true)
         if npx skills add "$REPO" --yes 2>/dev/null; then
             after=$(ls "$PROJECT_DIR/.claude/skills/" 2>/dev/null | sort || true)
@@ -144,17 +152,25 @@ fetch_skill() {
             || { echo "  ✗ Failed to clone $REPO" >&2; return 1; }
     fi
 
-    # Derive skill name from SKILL.md name: field, fallback to repo name
+    # Resolve skill source directory (optionally a subdir) and derive a name.
+    local src_dir="$clone_dir"
+    [[ -n "$SUBDIR" ]] && src_dir="$clone_dir/$SUBDIR"
+    if [[ ! -d "$src_dir" ]]; then
+        echo "  ✗ Subdir '$SUBDIR' not found in $REPO" >&2
+        return 1
+    fi
+
     local skill_name=""
-    if [[ -f "$clone_dir/SKILL.md" ]]; then
-        skill_name=$(grep -m1 '^name:' "$clone_dir/SKILL.md" \
+    if [[ -f "$src_dir/SKILL.md" ]]; then
+        skill_name=$(grep -m1 '^name:' "$src_dir/SKILL.md" \
             | sed 's/^name:[[:space:]]*//' | tr -d '"'"'" | tr -d ' ' || true)
     fi
-    [[ -z "$skill_name" ]] && skill_name="${repo_name#skill-}"
+    [[ -z "$skill_name" ]] && skill_name="$(basename "$src_dir")"
+    [[ -z "$skill_name" || "$skill_name" == "." ]] && skill_name="${repo_name#skill-}"
 
     local link="$PROJECT_DIR/.claude/skills/$skill_name"
     [[ -L "$link" ]] && rm -f "$link"
-    [[ -e "$link" ]] || ln -sf "$clone_dir" "$link"
+    [[ -e "$link" ]] || ln -sf "$src_dir" "$link"
     echo "  → .claude/skills/$skill_name" >&2
 
     echo "$skill_name"

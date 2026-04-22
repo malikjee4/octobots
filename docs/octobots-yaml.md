@@ -15,9 +15,11 @@ roles:
     ref: main
 
 skills:
-  - repo: sdlc:tdd                  # → sdlc-skills monorepo, skill "tdd"
-  - repo: sdlc:code-review
+  - repo: sdlc:code-review          # → sdlc-skills monorepo, skill "code-review"
   - repo: sdlc:msgraph
+  - repo: mattpocock/skills         # third-party multi-skill repo
+    ref: main
+    subdir: tdd                     # pick one skill out of the repo
   - repo: myorg/skill-internal      # private skill on its own repo
     ref: feature/new-workflow
 ```
