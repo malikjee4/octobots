@@ -393,10 +393,14 @@ class TmuxManager:
 
             theme = ROLE_THEME.get(worker, {"color": "colour250", "icon": "🤖", "name": worker})
 
-            # Set pane border color and title
+            # Set pane role label via user-option — immune to Claude Code's
+            # terminal title escape codes which override #{pane_title}.
+            subprocess.run([
+                "tmux", "set-option", "-p", "-t", pane_target,
+                "@pane_role", f"{theme['icon']} {theme['name']}",
+            ], capture_output=True)
             subprocess.run([
                 "tmux", "select-pane", "-t", pane_target,
-                "-T", f"{theme['icon']} {theme['name']}",
                 "-P", f"fg={theme['color']}",
             ], capture_output=True)
 
@@ -406,7 +410,7 @@ class TmuxManager:
         ], capture_output=True)
         subprocess.run([
             "tmux", "set-option", "-t", self.session, "pane-border-format",
-            " #{pane_title} ",
+            " #{@pane_role} ",  # user-option — Claude Code cannot override this
         ], capture_output=True)
         subprocess.run([
             "tmux", "set-option", "-t", self.session, "pane-border-style", "fg=colour240",
@@ -473,8 +477,11 @@ class TmuxManager:
 
         theme = ROLE_THEME.get(role, {"color": "colour250", "icon": "🤖", "name": role})
         subprocess.run([
+            "tmux", "set-option", "-p", "-t", pane_target,
+            "@pane_role", f"{theme['icon']} {theme['name']}",
+        ], capture_output=True)
+        subprocess.run([
             "tmux", "select-pane", "-t", pane_target,
-            "-T", f"{theme['icon']} {theme['name']}",
             "-P", f"fg={theme['color']}",
         ], capture_output=True)
 
@@ -688,7 +695,14 @@ class Supervisor:
         self._write_roster()
 
     def _launch_worker(self, role: str) -> None:
-        # For clones, source_role is the definition; role is the instance id
+        # For clones, source_role is the definition; role is the instance id.
+        # Also auto-detect pool workers whose agent dir is a symlink (created by
+        # generate_worker_pool.sh) — treat the symlink target dir name as source_role
+        # so `--agent <source_role>` passes the canonical name Claude Code knows.
+        if role not in self._role_source:
+            installed_dir = INSTALLED_AGENTS / role
+            if installed_dir.is_symlink():
+                self._role_source[role] = installed_dir.resolve().name
         source_role = self._role_source.get(role, role)
         role_dir = resolve_role(source_role)
         if not role_dir:
