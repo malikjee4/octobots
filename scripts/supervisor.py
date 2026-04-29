@@ -1328,7 +1328,7 @@ class Supervisor:
         custom_rules = get_dispatch_rules(role)
         rules_block = render_dispatch_rules(custom_rules, msg_id, OCTOBOTS_DIR)
 
-        prompt = f"Message from {sender}: {content} {rules_block}"
+        prompt = f"{content} {rules_block}"
         self.tmux.send_keys(pane, prompt, confirm_paste=True)
         console.print(f"[green]→[/green] {role}: task from {sender} ({msg_id[:8]})")
 
