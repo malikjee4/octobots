@@ -344,6 +344,8 @@ seed_claude_dir() {
             [[ ! -e "$link" ]] && ln -sf "$skill_dir" "$link" && echo "  .claude/skills/$skill (installed)"
         done
     fi
+
+    return 0
 }
 
 echo ""
