@@ -58,6 +58,14 @@ ROLE_THEME: dict[str, dict[str, str]] = role_themes()
 
 console = Console()
 
+
+def claude_permission_args() -> str:
+    """Return Claude Code permission flags for worker launches."""
+    if os.environ.get("OCTOBOTS_CLAUDE_BYPASS_PERMISSIONS") == "0":
+        return ""
+    return "--dangerously-skip-permissions"
+
+
 # ── Dispatch rules ──────────────────────────────────────────────────────────
 
 # Bundled default rules file — dev-workflow roles (GitHub issues + shell relay).
@@ -829,6 +837,8 @@ class Supervisor:
             ollama_model = os.environ.get(role_var) or os.environ.get("OCTOBOTS_OLLAMA_MODEL", "")
 
         if runtime == "claude":
+            permission_args = claude_permission_args()
+            permission_suffix = f" {permission_args}" if permission_args else ""
             if ollama_model:
                 # Per-role local model: wrap with `ollama launch claude`,
                 # which exec's real Claude Code with the right env vars set.
@@ -843,7 +853,7 @@ class Supervisor:
                     f"{gh_env}OCTOBOTS_ID={role} OCTOBOTS_DB={db_path} "
                     f"DISABLE_AUTO_COMPACT=1 CLAUDE_CODE_DISABLE_AUTO_COMPACT=1 "
                     f"ollama launch claude --model {ollama_model} --yes -- "
-                    f"--agent '{source_role}' --dangerously-skip-permissions"
+                    f"--agent '{source_role}'{permission_suffix}"
                 )
             else:
                 if not shutil.which("claude"):
@@ -852,7 +862,7 @@ class Supervisor:
                 agent_cmd = (
                     f"{gh_env}OCTOBOTS_ID={role} OCTOBOTS_DB={db_path} "
                     f"CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 "
-                    f"claude --agent '{source_role}' --dangerously-skip-permissions"
+                    f"claude --agent '{source_role}'{permission_suffix}"
                 )
         elif runtime == "copilot":
             if not shutil.which("copilot"):

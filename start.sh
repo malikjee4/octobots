@@ -197,9 +197,13 @@ case "$RUNTIME" in
             # Local models choke on Claude Code auto-compact (malformed
             # tool-use → hung session). Disable it; supervisor recycles
             # the pane on a schedule instead.
+            CLAUDE_ARGS=(--agent "$ROLE")
+            if [[ "${OCTOBOTS_CLAUDE_BYPASS_PERMISSIONS:-1}" != "0" ]]; then
+                CLAUDE_ARGS+=(--dangerously-skip-permissions)
+            fi
             CMD+=("DISABLE_AUTO_COMPACT=1" "CLAUDE_CODE_DISABLE_AUTO_COMPACT=1"
                   ollama launch claude --model "$OLLAMA_MODEL" --yes --
-                  --agent "$ROLE" --dangerously-skip-permissions)
+                  "${CLAUDE_ARGS[@]}")
             BANNER="Claude Code via Ollama ($OLLAMA_MODEL)"
         else
             command -v claude &>/dev/null || { echo "Error: claude binary not found." >&2; exit 1; }
@@ -209,7 +213,10 @@ case "$RUNTIME" in
             for v in ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_MODEL ANTHROPIC_SMALL_FAST_MODEL OCTOBOTS_LLM_PROVIDER; do
                 [[ -n "${!v:-}" ]] && CMD+=("$v=${!v}")
             done
-            CMD+=(claude --agent "$ROLE" --dangerously-skip-permissions)
+            CMD+=(claude --agent "$ROLE")
+            if [[ "${OCTOBOTS_CLAUDE_BYPASS_PERMISSIONS:-1}" != "0" ]]; then
+                CMD+=(--dangerously-skip-permissions)
+            fi
             BANNER="Claude Code"
         fi
         ;;
